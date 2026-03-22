@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>{% block title %}Panini Album 2026{% endblock %}</title>
+
+  <!-- Main stylesheet for layout, colour palette and animations -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+
+<body>
+  <header class="app-header">
+    <nav class="navbar">
+      <div class="navbar-left">
+        <div class="navbar-logo">
+          <span class="logo-mark">⚽</span>
+          <span class="logo-text">Panini Album 2026 - JULIAN ROMERO</span>
+        </div>
+      </div>
+
+      <div class="navbar-center">
+        <!-- Teams dropdown – populated from Flask context -->
+        <div class="dropdown" id="teamsDropdown">
+          <button class="dropdown-toggle" type="button">
+            Teams
+            <span class="dropdown-caret">▼</span>
+          </button>
+          <div class="dropdown-menu">
+            {% for code, page in team_pages.items()|sort %}
+            <button class="dropdown-item" type="button" data-target-page-id="{{ page.id }}">
+              {{ code }} – {{ page.title }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="navbar-right">
+        <button id="exportMissingBtn" class="btn-primary" type="button">
+          Export Missing (Excel)
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="app-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="app-footer">
+    <span>Built with Flask + vanilla JS · Fully client‑side progress tracking</span>
+  </footer>
+
+  <!-- Main behaviour script -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>

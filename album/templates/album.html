@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Panini Album 2026 BY ROMERO{% endblock %}
+
+{% block content %}
+<section class="album-shell">
+  <div class="album-book">
+    <button class="page-arrow page-arrow-left" type="button" id="pageArrowLeft" aria-label="Previous page">
+      ‹
+    </button>
+
+    <div class="album-view">
+      <!--
+        The inner track holds all pages horizontally.
+        JavaScript translates this element to simulate page flips.
+      -->
+      <div class="album-track" id="albumTrack">
+        {% for page in album_pages %}
+        <article class="album-page" data-page-id="{{ page.id }}" data-page-index="{{ loop.index0 }}">
+          <header class="album-page-header">
+            <h2 class="album-page-title">{{ page.title }}</h2>
+            <p class="album-page-subtitle">
+              {{ page.section }}
+              {% if page.team_code %}
+              · {{ page.team_code }}
+              {% endif %}
+            </p>
+          </header>
+
+          {% if page.stickers %}
+          <div class="stickers-grid">
+            {% for sticker in page.stickers %}
+            <label class="sticker-card" data-sticker-id="{{ sticker.id }}" title="{{ sticker.label }}">
+              <input class="sticker-checkbox" type="checkbox" data-sticker-id="{{ sticker.id }}" />
+              <div class="sticker-inner">
+                <span class="sticker-number">#{{ sticker.number }}</span>
+                <span class="sticker-label">{{ sticker.label }}</span>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="page-intro">
+            <p>
+              Welcome to your digital companion for the
+              <strong>FIFA World Cup 2026</strong> sticker album.
+            </p>
+            <p>
+              Use the <strong>left / right arrows</strong> to flip through pages,
+              tick the stickers you already own, and generate an
+              <strong>Excel list</strong> of the ones you are still missing.
+            </p>
+            <p>
+              Open the <strong>Teams</strong> menu in the navigation bar to jump
+              directly to any national team.
+            </p>
+          </div>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+
+    <button class="page-arrow page-arrow-right" type="button" id="pageArrowRight" aria-label="Next page">
+      ›
+    </button>
+  </div>
+
+  <div class="page-indicator" id="pageIndicator">
+    <!-- Populated dynamically with "Page X of Y" -->
+  </div>
+</section>
+{% endblock %}
