@@ -19,6 +19,12 @@
         <article class="album-page" data-page-id="{{ page.id }}" data-page-index="{{ loop.index0 }}">
           <header class="album-page-header">
             <h2 class="album-page-title">{{ page.title }}</h2>
+
+            <div>
+              <img src="{{ url_for('static', filename='images/' + page.title|lower + '.jpg') }}" alt="{{ page.title }}"
+                class="team-flag">
+            </div>
+
             <p class="album-page-subtitle">
               {{ page.section }}
               {% if page.team_code %}

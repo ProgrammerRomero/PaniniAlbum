@@ -105,10 +105,13 @@ def build_album_structure() -> List[PageDefinition]:
 
     # Example team pages. You can expand these ranges or add more teams.
     pages.append(_team_page("ARG", "Argentina", range(1, 21)))
+    pages.append(_team_page("ECU", "Ecuador", range(1, 21)))
+    pages.append(_team_page("COL", "Colombia", range(1, 21)))
+    pages.append(_team_page("URU", "Uruguay", range(1, 21)))
     pages.append(_team_page("BRA", "Brazil", range(1, 21)))
+    pages.append(_team_page("PAR", "Paraguay", range(1, 21)))
     pages.append(_team_page("MEX", "Mexico", range(1, 21)))
     pages.append(_team_page("USA", "United States", range(1, 21)))
-    pages.append(_team_page("COL", "Colombia", range(1, 21)))
 
     return pages
 
