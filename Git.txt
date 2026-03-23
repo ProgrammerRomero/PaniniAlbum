@@ -1,0 +1,49 @@
+git remote add origin https://github.com/ProgrammerRomero/PaniniAlbum.git
+
+git push -u origin master -> Push to GitHub properly
+
+git log origin/master..master -> If nothing shows, everything has been pushed and updated in Github
+
+git fetch origin
+git log master origin/master
+
+
+How to add a new commit with message:
+git commit -a -m "Images have been added to each team, more teams have been added"
+
+
+git branch	        Ver ramas locales + actual
+git branch -r	    Ver ramas remotas
+git branch -a	    Ver todas
+git switch	        Cambiar de rama
+git branch -vv      Vista mas Completa
+git log             ver commit history
+git log --online
+git diff            ver cambios exactos
+git diff --cached   ver cambios exactos listos para commit
+git status	        Ver rama actual
+git status -s       Ver estado actual resumido  
+    ?? -> New File
+    M  -> Modified  
+git status -sb      Ver todo en 1 linea
+
+git checkout -b nueva-funcion   Crear Nueva rama
+git add .
+git commit -m "avance"          Add commit
+git push                        Subir
+git checkout main               Regresar al main
+git merge nueva-funcion         Unir Cambios
+git branch -d origin            DELETE A Branch
+
+
+echo. > .gitignore              Creat el Git Ignore ARchivo
+.gitignore                      igual
+
+
+
+******* START AGAIN ***********
+
+Git status  If you see fatal: not a git repository
+
+then
+git init
