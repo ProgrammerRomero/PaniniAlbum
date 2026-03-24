@@ -76,4 +76,104 @@
     <!-- Populated dynamically with "Page X of Y" -->
   </div>
 </section>
+
+
+<!--
+    ============================================================================
+    STATISTICS MODAL
+    ============================================================================
+
+    This modal displays collection statistics and is hidden by default.
+    It is shown when the user clicks the "Stats" button in the navbar.
+
+    The modal contains two main sections:
+    1. Overall Stats: Shows total completion percentage and count
+    2. Team Progress: Shows progress bars for each team
+
+    JavaScript populates this modal dynamically based on:
+    - The album structure data embedded from the server (albumStructureData)
+    - The user's owned stickers stored in localStorage
+  -->
+<div id="statsModal" class="modal" style="display: none;">
+  <!-- Modal overlay: clicking this closes the modal -->
+  <div class="modal-overlay" id="statsModalOverlay"></div>
+
+  <!-- Modal content container -->
+  <div class="modal-content">
+    <!-- Modal header with title and close button -->
+    <div class="modal-header">
+      <h2 class="modal-title">📊 Collection Statistics</h2>
+      <button class="modal-close" id="statsModalClose" type="button" aria-label="Close modal">×</button>
+    </div>
+
+    <!-- Modal body containing the statistics -->
+    <div class="modal-body">
+
+      <!--
+          OVERALL STATS SECTION
+          Shows big-picture metrics:
+          - Completion percentage (large number)
+          - Owned / Total count
+        -->
+      <div class="stats-section overall-stats">
+        <div class="stats-overall-item">
+          <span class="stats-overall-label">Album Complete</span>
+          <span class="stats-overall-value" id="statsOverallPercent">0%</span>
+        </div>
+        <div class="stats-overall-item">
+          <span class="stats-overall-label">Stickers Owned</span>
+          <span class="stats-overall-value" id="statsOverallCount">0 / 0</span>
+        </div>
+      </div>
+
+      <!--
+          TEAM PROGRESS SECTION
+          Shows a list of all teams with progress bars.
+          Each item displays:
+          - Team name
+          - Progress bar (filled based on % complete)
+          - Owned / Total count
+
+          JavaScript populates this container dynamically.
+        -->
+      <div class="stats-section team-stats">
+        <h3 class="stats-section-title">Progress by Team</h3>
+        <div id="statsTeamList" class="stats-team-list">
+          <!-- Team progress bars will be inserted here by JavaScript -->
+        </div>
+      </div>
+
+    </div>
+    <!-- End modal body -->
+
+  </div>
+  <!-- End modal content -->
+
+</div>
+<!-- End stats modal -->
+
+
+<!--
+    ALBUM STRUCTURE DATA (JSON)
+    ===========================
+
+    This script tag contains the complete album structure data embedded
+    directly in the HTML by the Flask server. This allows JavaScript to
+    access the album metadata without making an additional API call.
+
+    The data is an array of page objects, each containing:
+    - id: unique page identifier (e.g., "cover", "team-arg")
+    - title: display name (e.g., "Argentina")
+    - section: category (e.g., "General", "Teams")
+    - team_code: 3-letter code or null for non-team pages
+    - stickers: array of sticker objects with id, number, label
+
+    JavaScript uses this data to:
+    1. Calculate total stickers per team
+    2. Compare against owned stickers in localStorage
+    3. Generate progress bars and statistics
+  -->
+<script id="albumStructureData" type="application/json">
+    {{ album_pages | tojson }}
+  </script>
 {% endblock %}

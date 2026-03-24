@@ -1,3 +1,4 @@
+python app.py
 git remote add origin https://github.com/ProgrammerRomero/PaniniAlbum.git
 
 git push -u origin master -> Push to GitHub properly
