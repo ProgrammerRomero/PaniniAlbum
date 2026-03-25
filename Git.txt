@@ -22,6 +22,7 @@ git branch -vv      Vista mas Completa
 git log                             ver commit history -> this shows COmmits IDs
 git log --online
 git log --oneline --graph --all     Shows branches and commits visually:
+git log --oneline -5                
 
 git diff            ver cambios exactos
 git diff --cached   ver cambios exactos listos para commit
@@ -43,11 +44,42 @@ git checkout main               Regresar al main
 git merge nueva-funcion         Unir Cambios
 git branch -d origin            DELETE A Branch
 
+
 git checkout <Commit Id>
-git reset --hard <Commit Id>    Force Reset a commit
 git revert <Commit Id>          Undo a commit Safely
+git reset --hard <Commit Id>    *****Force Reset a commit**********
+git reset --hard HEAD           *****Reset everything to last commit (most common)********
+git fetch origin                Reset to last pushed version (origin)
+git reset --hard origin/main    Reset to last pushed version (origin)
+
+🧠 Key difference
+Command	What it does
+git revert	Undo changes with a new commit
+git reset --hard	Go back in time (delete history)
+
+⚠️ Important warning
+If you already pushed commits and then do:
+git reset --hard 77678
+git push --force
+
+👉 You are rewriting GitHub history (dangerous for teams)
+✅ Simple rule
+Want to undo safely → revert
+Want to go back completely → reset --hard
 
 
+
+git stash                       👉 To stash = to temporarily save your changes without committing them
+                                📦 “Put my current work aside, clean my workspace, and come back to it later.”
+git stash list                  📚 See your stashes
+gir stash pop                   Bring the changes back
+git stash apply                 🔄 Apply stash without deleting it
+
+🚀 Example workflow
+git status
+git stash
+git pull origin main
+git stash pop
 
 
 
