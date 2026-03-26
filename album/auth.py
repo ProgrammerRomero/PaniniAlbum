@@ -26,7 +26,7 @@ from flask_login import (
 )
 from flask_mail import Message
 
-from .models import db, User, PasswordResetToken, UserSticker
+from .models import db, User, PasswordResetToken, UserSticker, bcrypt
 from .utils import validate_email
 
 # Create blueprint
@@ -366,6 +366,93 @@ def upload_photo():
     # 3. Store the URL in the user record
     flash("Photo upload feature coming soon! 🎉", "info")
     return redirect(url_for("auth.profile"))
+
+
+# =============================================================================
+# OTHER USERS (Trading Partners)
+# =============================================================================
+
+@auth_bp.route("/users")
+@login_required
+def users():
+    """
+    Display all registered users with their collection stats.
+
+    Shows potential trading partners prioritized by:
+    1. Users who have duplicates that the current user needs
+    2. Users who need duplicates that the current user has
+
+    This helps users find the best trading opportunities.
+    """
+    from .config import ALBUM_PAGES
+
+    # Get all stickers in the album
+    all_sticker_ids = set()
+    for page in ALBUM_PAGES:
+        for sticker in page.get("stickers", []):
+            all_sticker_ids.add(sticker["id"])
+
+    # Get current user's data
+    current_owned = set()
+    current_duplicates = {}
+    for sticker in current_user.stickers:
+        if sticker.is_owned:
+            current_owned.add(sticker.sticker_id)
+        if sticker.duplicate_count > 0:
+            current_duplicates[sticker.sticker_id] = sticker.duplicate_count
+
+    current_missing = all_sticker_ids - current_owned
+
+    # Get all other users
+    other_users = User.query.filter(User.id != current_user.id).all()
+
+    user_data = []
+
+    for user in other_users:
+        # Get user's stickers
+        user_owned = set()
+        user_duplicates = {}
+
+        for sticker in user.stickers:
+            if sticker.is_owned:
+                user_owned.add(sticker.sticker_id)
+            if sticker.duplicate_count > 0:
+                user_duplicates[sticker.sticker_id] = sticker.duplicate_count
+
+        user_missing = all_sticker_ids - user_owned
+
+        # Calculate trading metrics
+        # 1. User has duplicates that current user needs (good for current user)
+        can_receive = user_duplicates.keys() & current_missing
+
+        # 2. Current user has duplicates that this user needs (good for other user)
+        can_give = current_duplicates.keys() & user_missing
+
+        # Calculate match score (higher = better trading partner)
+        match_score = len(can_receive) + len(can_give)
+
+        user_data.append({
+            "user": user,
+            "owned_count": len(user_owned),
+            "missing_count": len(user_missing),
+            "duplicate_count": sum(user_duplicates.values()),
+            "can_receive": sorted(can_receive),
+            "can_receive_count": len(can_receive),
+            "can_give": sorted(can_give),
+            "can_give_count": len(can_give),
+            "match_score": match_score,
+            "completion": round((len(user_owned) / len(all_sticker_ids)) * 100) if all_sticker_ids else 0,
+        })
+
+    # Sort by match score (descending) - best trading partners first
+    user_data.sort(key=lambda x: (-x["match_score"], -x["completion"]))
+
+    return render_template(
+        "auth/users.html",
+        users_data=user_data,
+        current_missing_count=len(current_missing),
+        current_duplicates_count=len(current_duplicates),
+    )
 
 
 # =============================================================================

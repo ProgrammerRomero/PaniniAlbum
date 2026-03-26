@@ -1,0 +1,777 @@
+{% extends "base.html" %}
+
+{% block title %}Other Users - Panini Album{% endblock %}
+
+{% block content %}
+<section class="auth-section users-section">
+  <div class="users-container">
+
+    <!-- Header -->
+    <header class="users-header">
+      <h1 class="users-title">👥 Other Collectors</h1>
+      <p class="users-subtitle">
+        Find trading partners! Users are sorted by compatibility -
+        those with the most matches for your collection appear first.
+      </p>
+
+      <div class="current-user-stats">
+        <span class="stat-badge">
+          📦 You have <strong>{{ current_duplicates_count }}</strong> duplicates to trade
+        </span>
+        <span class="stat-badge">
+          🔍 You need <strong>{{ current_missing_count }}</strong> stickers
+        </span>
+      </div>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Users Grid -->
+    {% if users_data %}
+      <div class="users-grid">
+        {% for data in users_data %}
+        <div class="user-card {{ 'top-match' if data.match_score > 0 else '' }}" data-user-index="{{ loop.index0 }}">
+
+          <!-- Card Header with Rank -->
+          <div class="user-card-header">
+            {% if loop.index <= 3 and data.match_score > 0 %}
+              <div class="rank-badge rank-{{ loop.index }}">
+                {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
+              </div>
+            {% endif %}
+
+            <div class="match-score {{ 'has-matches' if data.match_score > 0 else '' }}">
+              <span class="match-label">Trading Match</span>
+              <span class="match-value">{{ data.match_score }}</span>
+            </div>
+          </div>
+
+          <!-- User Info Section -->
+          <div class="user-info-section">
+            <div class="user-avatar">
+              {% if data.user.photo_url %}
+                <img src="{{ data.user.photo_url }}" alt="{{ data.user.username }}">
+              {% else %}
+                <div class="avatar-placeholder">{{ data.user.username[0]|upper }}</div>
+              {% endif %}
+            </div>
+
+            <div class="user-details">
+              <h3 class="user-name">{{ data.user.username }}</h3>
+              <p class="user-email">{{ data.user.email }}</p>
+              <div class="user-since">
+                Member since {{ data.user.created_at.strftime('%b %Y') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Collection Stats -->
+          <div class="collection-stats">
+            <div class="stat-item">
+              <span class="stat-value">{{ data.owned_count }}</span>
+              <span class="stat-label">Owned</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ data.duplicate_count }}</span>
+              <span class="stat-label">For Trade</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ data.completion }}%</span>
+              <span class="stat-label">Complete</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress-bar-container">
+            <div class="progress-bar" style="width: {{ data.completion }}%"></div>
+          </div>
+
+          <!-- Trading Section -->
+          <div class="trading-section">
+
+            <!-- What you can receive -->
+            <div class="trade-block {{ 'has-items' if data.can_receive_count > 0 else '' }}">
+              <div class="trade-header">
+                <span class="trade-icon">📥</span>
+                <span class="trade-title">You Can Get</span>
+                <span class="trade-count">{{ data.can_receive_count }}</span>
+              </div>
+
+              {% if data.can_receive_count > 0 %}
+                <div class="sticker-tags">
+                  {% for sticker_id in data.can_receive[:5] %}
+                    <span class="sticker-tag">{{ sticker_id }}</span>
+                  {% endfor %}
+                  {% if data.can_receive_count > 5 %}
+                    <span class="more-tag">+{{ data.can_receive_count - 5 }} more</span>
+                  {% endif %}
+                </div>
+              {% else %}
+                <p class="no-trade">No duplicates you need</p>
+              {% endif %}
+            </div>
+
+            <!-- What you can give -->
+            <div class="trade-block {{ 'has-items' if data.can_give_count > 0 else '' }}">
+              <div class="trade-header">
+                <span class="trade-icon">📤</span>
+                <span class="trade-title">You Can Give</span>
+                <span class="trade-count">{{ data.can_give_count }}</span>
+              </div>
+
+              {% if data.can_give_count > 0 %}
+                <div class="sticker-tags">
+                  {% for sticker_id in data.can_give[:5] %}
+                    <span class="sticker-tag give">{{ sticker_id }}</span>
+                  {% endfor %}
+                  {% if data.can_give_count > 5 %}
+                    <span class="more-tag">+{{ data.can_give_count - 5 }} more</span>
+                  {% endif %}
+                </div>
+              {% else %}
+                <p class="no-trade">No matches for their needs</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Contact Button -->
+          <div class="user-actions">
+            <a href="mailto:{{ data.user.email }}?subject=Panini%20Album%20Trade%20Offer"
+               class="btn btn-primary btn-block contact-btn">
+              📧 Contact for Trade
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="no-users-message">
+        <div class="empty-state">
+          <span class="empty-icon">👤</span>
+          <h2>No Other Users Yet</h2>
+          <p>You're the only registered user! Invite your friends to start trading stickers.</p>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<!-- Expanded Card Modal -->
+<div id="userCardModal" class="user-card-modal">
+  <div class="user-card-modal-backdrop"></div>
+  <div class="user-card-modal-content">
+    <button class="modal-close-btn">&times;</button>
+    <div id="modalCardContainer">
+      <!-- Card content will be cloned here -->
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Card click to expand functionality
+  const cards = document.querySelectorAll('.user-card');
+  const modal = document.getElementById('userCardModal');
+  const modalBackdrop = modal.querySelector('.user-card-modal-backdrop');
+  const modalCloseBtn = modal.querySelector('.modal-close-btn');
+  const modalContainer = document.getElementById('modalCardContainer');
+
+  function openModal(card) {
+    // Clone the card content
+    const clonedCard = card.cloneNode(true);
+    clonedCard.classList.add('expanded');
+
+    // Remove click handler from cloned card
+    clonedCard.style.cursor = 'default';
+
+    // Clear and populate modal
+    modalContainer.innerHTML = '';
+    modalContainer.appendChild(clonedCard);
+
+    // Show modal
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    modalContainer.innerHTML = '';
+  }
+
+  cards.forEach(card => {
+    card.addEventListener('click', () => openModal(card));
+    card.style.cursor = 'pointer';
+  });
+
+  modalBackdrop.addEventListener('click', closeModal);
+  modalCloseBtn.addEventListener('click', closeModal);
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+      closeModal();
+    }
+  });
+
+  // Fix Teams dropdown navigation on this page
+  const teamsDropdown = document.getElementById('teamsDropdown');
+  if (teamsDropdown) {
+    const dropdownItems = teamsDropdown.querySelectorAll('.dropdown-item');
+    dropdownItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const pageId = item.getAttribute('data-target-page-id');
+        if (pageId) {
+          // Redirect to album page with page ID
+          window.location.href = '{{ url_for("album.index") }}#' + pageId;
+        }
+      });
+    });
+  }
+})();
+</script>
+
+<style>
+/* Users Page Styles - Compact */
+.users-section {
+  padding: 0.75rem 0.5rem;
+  min-height: calc(100vh - 100px);
+}
+
+.users-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header - Compact */
+.users-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.users-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem 0;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.users-subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.current-user-stats {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat-badge {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 50px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+
+.stat-badge strong {
+  color: var(--color-accent);
+}
+
+/* Users Grid - 5 cards per row, larger gap */
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+}
+
+/* User Card - 1.5x larger sizes */
+.user-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  padding: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.user-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.user-card.top-match {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
+}
+
+/* Card Header - Larger */
+.user-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.rank-badge {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.match-score {
+  text-align: right;
+  padding: 0.5rem 0.8rem;
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 8px;
+  min-width: 70px;
+}
+
+.match-score.has-matches {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.match-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.match-value {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.match-score.has-matches .match-value {
+  color: #22c55e;
+}
+
+/* User Info Section - Larger */
+.user-info-section {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--color-accent);
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.15rem 0;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin: 0 0 0.15rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-since {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+/* Collection Stats - Larger */
+.collection-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.collection-stats .stat-item {
+  text-align: center;
+  padding: 0.6rem 0.4rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.collection-stats .stat-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.collection-stats .stat-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-top: 0.1rem;
+}
+
+/* Progress Bar - Larger */
+.progress-bar-container {
+  height: 5px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+  margin-bottom: 0.8rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Trading Section - Larger side-by-side */
+.trading-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.trade-block {
+  padding: 0.6rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+}
+
+.trade-block.has-items {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.trade-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.4rem;
+}
+
+.trade-icon {
+  font-size: 0.9rem;
+}
+
+.trade-title {
+  flex: 1;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.trade-count {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgba(56, 189, 248, 0.2);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.trade-block.has-items .trade-count {
+  background: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.sticker-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.sticker-tag {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.35rem;
+  background: rgba(56, 189, 248, 0.2);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: monospace;
+}
+
+.sticker-tag.give {
+  background: rgba(249, 115, 22, 0.2);
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.more-tag {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.35rem;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+}
+
+.no-trade {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  font-style: italic;
+}
+
+/* User Actions - Larger */
+.user-actions {
+  margin-top: auto;
+}
+
+.contact-btn {
+  width: 100%;
+  text-align: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* Modal Styles */
+.user-card-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-card-modal.active {
+  display: flex;
+}
+
+.user-card-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.user-card-modal-content {
+  position: relative;
+  z-index: 1001;
+  max-width: 500px;
+  width: 90%;
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2rem;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  z-index: 1002;
+}
+
+.modal-close-btn:hover {
+  opacity: 1;
+}
+
+/* Expanded card in modal */
+.user-card-modal-content .user-card {
+  cursor: default;
+  transform: none !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.user-card-modal-content .user-card:hover {
+  transform: none !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Make card in modal larger */
+.user-card-modal-content .user-card {
+  padding: 1.5rem;
+}
+
+.user-card-modal-content .user-avatar {
+  width: 60px;
+  height: 60px;
+}
+
+.user-card-modal-content .avatar-placeholder {
+  font-size: 1.5rem;
+}
+
+.user-card-modal-content .user-name {
+  font-size: 1.2rem;
+}
+
+.user-card-modal-content .user-email {
+  font-size: 0.9rem;
+}
+
+.user-card-modal-content .collection-stats .stat-value {
+  font-size: 1.4rem;
+}
+
+.user-card-modal-content .match-value {
+  font-size: 1.6rem;
+}
+
+.user-card-modal-content .sticker-tags {
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+/* Empty State */
+.no-users-message {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-state {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.empty-state h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+}
+
+.empty-state p {
+  color: var(--color-text-muted);
+}
+
+/* Responsive - 5 columns on desktop, scaling down */
+@media (max-width: 1400px) {
+  .users-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .users-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .users-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .users-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .users-title {
+    font-size: 1.25rem;
+  }
+
+  .current-user-stats {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .trading-section {
+    grid-template-columns: 1fr;
+  }
+
+  .user-card-modal-content {
+    width: 95%;
+    max-width: none;
+  }
+}
+</style>
+{% endblock %}
