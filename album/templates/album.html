@@ -36,11 +36,40 @@
           {% if page.stickers %}
           <div class="stickers-grid">
             {% for sticker in page.stickers %}
+            <!--
+              STICKER CARD WITH DUPLICATE TRACKING
+              =====================================
+              Each sticker card now includes:
+              1. Checkbox to mark as owned (original feature)
+              2. Sticker number and label
+              3. Duplicate counter with +/- buttons (new feature)
+
+              The duplicate counter allows users to track how many extra copies
+              they have of each sticker for trading purposes.
+            -->
             <label class="sticker-card" data-sticker-id="{{ sticker.id }}" title="{{ sticker.label }}">
               <input class="sticker-checkbox" type="checkbox" data-sticker-id="{{ sticker.id }}" />
               <div class="sticker-inner">
                 <span class="sticker-number">#{{ sticker.number }}</span>
                 <span class="sticker-label">{{ sticker.label }}</span>
+
+                <!--
+                  DUPLICATE COUNTER SECTION
+                  =========================
+                  Allows users to track duplicate stickers:
+                  - minus-btn: Decrease duplicate count (min 0)
+                  - duplicate-count: Display current duplicate count
+                  - plus-btn: Increase duplicate count
+
+                  Only visible when sticker is marked as owned.
+                  Shows a badge when duplicates exist (> 0).
+                -->
+                <div class="duplicate-counter" data-sticker-id="{{ sticker.id }}">
+                  <button type="button" class="duplicate-btn minus-btn" data-sticker-id="{{ sticker.id }}" aria-label="Decrease duplicates">−</button>
+                  <span class="duplicate-count" data-sticker-id="{{ sticker.id }}">0</span>
+                  <button type="button" class="duplicate-btn plus-btn" data-sticker-id="{{ sticker.id }}" aria-label="Increase duplicates">+</button>
+                  <span class="duplicate-badge" data-sticker-id="{{ sticker.id }}" style="display: none;">♻️</span>
+                </div>
               </div>
             </label>
             {% endfor %}

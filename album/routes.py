@@ -112,3 +112,111 @@ def export_missing():
         download_name="missing_stickers.xlsx",
     )
 
+
+@bp.route("/export-duplicates", methods=["POST"])
+def export_duplicates():
+    """
+    Generate an Excel file listing **duplicate** stickers for trading.
+
+    The request body must contain JSON with a `duplicates` list describing
+    each sticker the user has duplicates of, along with the count.
+
+    Example payload:
+        {
+            "duplicates": [
+                {"id": "ARG-1", "count": 2},
+                {"id": "BRA-5", "count": 1}
+            ]
+        }
+
+    The server looks up each sticker in the album definition and generates
+    a workbook with details suitable for sharing with other collectors.
+    This helps users trade duplicates to complete their collections.
+
+    Columns in the output:
+        - Sticker ID
+        - Team Code
+        - Page Title
+        - Number
+        - Label
+        - Duplicates Available (count)
+    """
+    data = request.get_json(silent=True) or {}
+    duplicates_raw = data.get("duplicates", [])
+
+    # Build a lookup of sticker details from album structure
+    # This maps sticker_id -> {page, sticker details}
+    sticker_lookup = {}
+    for page in ALBUM_PAGES:
+        for sticker in page.get("stickers", []):
+            sticker_lookup[sticker["id"]] = {
+                "page": page,
+                "sticker": sticker,
+            }
+
+    # Build rows for the Excel file
+    duplicate_rows: List[dict] = []
+    for item in duplicates_raw:
+        if not isinstance(item, dict):
+            continue
+
+        sticker_id = str(item.get("id", "")).strip()
+        count = int(item.get("count", 0))
+
+        if not sticker_id or count <= 0:
+            continue
+
+        # Look up sticker details in album structure
+        lookup = sticker_lookup.get(sticker_id)
+        if not lookup:
+            # Sticker not found in album (shouldn't happen)
+            continue
+
+        page = lookup["page"]
+        sticker = lookup["sticker"]
+
+        duplicate_rows.append(
+            {
+                "Sticker ID": sticker_id,
+                "Team Code": page.get("team_code") or "GENERAL",
+                "Page Title": page["title"],
+                "Number": sticker["number"],
+                "Label": sticker["label"],
+                "Duplicates Available": count,
+            }
+        )
+
+    # Sort by team code and then by sticker number for easy reading
+    duplicate_rows.sort(key=lambda r: (r["Team Code"], r["Number"]))
+
+    # Build an in-memory Excel file using openpyxl
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Duplicates for Trade"
+
+    if duplicate_rows:
+        headers = list(duplicate_rows[0].keys())
+        ws.append(headers)
+
+        for row in duplicate_rows:
+            ws.append([row[h] for h in headers])
+    else:
+        ws.append(["No duplicates recorded yet! 🎴"])
+        ws.append(["Use the + button on owned stickers to mark duplicates."])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+        as_attachment=True,
+        download_name="duplicates_for_trade.xlsx",
+    )
+

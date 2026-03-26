@@ -403,6 +403,101 @@ a:hover {
 }
 
 /* ==========================================================================
+   Duplicate Counter Styles
+   ==========================================================================
+
+   The duplicate counter appears on each sticker card and allows users
+   to track how many extra copies they have for trading purposes.
+
+   Structure:
+   - .duplicate-counter: Container for the entire counter
+   - .duplicate-btn: + and - buttons
+   - .duplicate-count: Number display
+   - .duplicate-badge: ♻️ icon shown when duplicates exist
+   ========================================================================== */
+
+/* Container for duplicate counter - positioned below sticker label */
+.duplicate-counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+/* Show duplicate counter more prominently when sticker is owned */
+.sticker-checkbox:checked ~ .sticker-inner .duplicate-counter {
+  opacity: 1;
+}
+
+/* + and - buttons for adjusting duplicate count */
+.duplicate-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-subtle);
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    transform 80ms ease-out;
+}
+
+.duplicate-btn:hover {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+.duplicate-btn:active {
+  transform: translateY(0);
+}
+
+/* Disabled state for minus button when count is 0 */
+.duplicate-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+/* Display of the duplicate count number */
+.duplicate-count {
+  min-width: 28px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums; /* Ensures numbers align nicely */
+}
+
+/* Badge shown when duplicates exist (♻️ recycling symbol) */
+.duplicate-badge {
+  font-size: 0.8rem;
+  margin-left: 0.2rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Subtle pulse animation for the duplicate badge */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ==========================================================================
    Page arrows + indicator
    ========================================================================== */
 

@@ -424,6 +424,293 @@
   }
 
   /* -----------------------------------------------------------------------
+   * DUPLICATE STICKER TRACKING
+   * -----------------------------------------------------------------------
+   *
+   * This feature allows users to track duplicate stickers for trading purposes.
+   *
+   * HOW IT WORKS:
+   * - Each sticker can have a "duplicate count" (0 or more)
+   * - Users click + to increase, - to decrease
+   * - Duplicate counts are stored in localStorage separately from owned stickers
+   * - Only stickers marked as "owned" can have duplicates
+   * - Users can export a list of duplicates for trading
+   *
+   * STORAGE:
+   * - Key: "panini_album_duplicates_v1"
+   * - Value: Object with sticker IDs as keys, counts as values
+   *   Example: { "ARG-1": 2, "BRA-5": 1 }
+   * --------------------------------------------------------------------- */
+
+  // Storage key for duplicate counts
+  const DUPLICATES_KEY = "panini_album_duplicates_v1";
+
+  // Element references for duplicate export
+  const exportDuplicatesBtn = document.getElementById("exportDuplicatesBtn");
+
+  /**
+   * Loads duplicate counts from localStorage.
+   *
+   * HOW IT WORKS:
+   * 1. Attempts to read the DUPLICATES_KEY from localStorage
+   * 2. Parses the JSON string into an object
+   * 3. Returns an empty object if no data exists or if parsing fails
+   *
+   * @returns {Object} Map of sticker ID -> duplicate count
+   *   Example: { "ARG-1": 2, "BRA-5": 1 }
+   */
+  function loadDuplicates() {
+    try {
+      const raw = window.localStorage.getItem(DUPLICATES_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      // Ensure it's an object (not array or other type)
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        return {};
+      }
+      return parsed;
+    } catch (e) {
+      console.warn("Failed to load duplicates from localStorage", e);
+      return {};
+    }
+  }
+
+  /**
+   * Saves duplicate counts to localStorage.
+   *
+   * HOW IT WORKS:
+   * 1. Converts the duplicates object to a JSON string
+   * 2. Stores it under DUPLICATES_KEY in localStorage
+   * 3. Silently handles errors (e.g., storage full)
+   *
+   * @param {Object} duplicates - Map of sticker ID -> count
+   */
+  function saveDuplicates(duplicates) {
+    try {
+      window.localStorage.setItem(DUPLICATES_KEY, JSON.stringify(duplicates));
+    } catch (e) {
+      console.warn("Failed to save duplicates to localStorage", e);
+    }
+  }
+
+  // Load duplicates once at startup
+  let duplicatesData = loadDuplicates();
+
+  /**
+   * Gets the duplicate count for a specific sticker.
+   *
+   * @param {string} stickerId - The sticker ID (e.g., "ARG-1")
+   * @returns {number} The duplicate count (0 if none)
+   */
+  function getDuplicateCount(stickerId) {
+    return duplicatesData[stickerId] || 0;
+  }
+
+  /**
+   * Sets the duplicate count for a specific sticker.
+   *
+   * HOW IT WORKS:
+   * 1. Validates the count is a non-negative number
+   * 2. If count > 0: stores it in duplicatesData
+   * 3. If count === 0: removes the key from duplicatesData (keeps storage clean)
+   * 4. Persists to localStorage
+   * 5. Updates the visual display
+   *
+   * @param {string} stickerId - The sticker ID
+   * @param {number} count - The new duplicate count (must be >= 0)
+   */
+  function setDuplicateCount(stickerId, count) {
+    // Validate count is a non-negative number
+    const validCount = Math.max(0, parseInt(count, 10) || 0);
+
+    if (validCount > 0) {
+      // Store the count
+      duplicatesData[stickerId] = validCount;
+    } else {
+      // Remove the entry if count is 0 (keeps storage clean)
+      delete duplicatesData[stickerId];
+    }
+
+    // Persist to localStorage
+    saveDuplicates(duplicatesData);
+
+    // Update the visual display
+    updateDuplicateDisplay(stickerId);
+  }
+
+  /**
+   * Updates the visual display of duplicate count for a sticker.
+   *
+   * HOW IT WORKS:
+   * 1. Finds the display elements for the given sticker ID
+   * 2. Updates the count number
+   * 3. Shows/hides the duplicate badge based on count
+   * 4. Enables/disables the minus button based on count
+   *
+   * This is called whenever a duplicate count changes.
+   *
+   * @param {string} stickerId - The sticker ID to update
+   */
+  function updateDuplicateDisplay(stickerId) {
+    // Find the count display element
+    const countEl = document.querySelector(`.duplicate-count[data-sticker-id="${stickerId}"]`);
+    // Find the badge element (shows ♻️ when duplicates exist)
+    const badgeEl = document.querySelector(`.duplicate-badge[data-sticker-id="${stickerId}"]`);
+    // Find the minus button
+    const minusBtn = document.querySelector(`.minus-btn[data-sticker-id="${stickerId}"]`);
+
+    const count = getDuplicateCount(stickerId);
+
+    // Update the displayed number
+    if (countEl) {
+      countEl.textContent = count;
+    }
+
+    // Show/hide the badge (♻️) based on whether duplicates exist
+    if (badgeEl) {
+      badgeEl.style.display = count > 0 ? "inline" : "none";
+    }
+
+    // Disable minus button when count is 0 (can't go negative)
+    if (minusBtn) {
+      minusBtn.disabled = count === 0;
+    }
+  }
+
+  /**
+   * Syncs all duplicate displays from localStorage on page load.
+   *
+   * Called during initialization to ensure the UI matches stored data.
+   */
+  function syncDuplicatesFromState() {
+    // Get all duplicate count elements
+    const countElements = document.querySelectorAll(".duplicate-count");
+    countElements.forEach((el) => {
+      const stickerId = el.getAttribute("data-sticker-id");
+      if (stickerId) {
+        updateDuplicateDisplay(stickerId);
+      }
+    });
+  }
+
+  /**
+   * Handles clicks on the duplicate counter buttons (+ and -).
+   *
+   * HOW IT WORKS:
+   * 1. Checks if the clicked element is a duplicate button
+   * 2. Gets the sticker ID from the button's data attribute
+   * 3. Checks if the sticker is marked as owned (required to have duplicates)
+   * 4. Updates the count:
+   *    - Plus button: increments by 1
+   *    - Minus button: decrements by 1 (minimum 0)
+   * 5. Saves and updates the display
+   *
+   * @param {Event} event - The click event
+   */
+  function handleDuplicateClick(event) {
+    const btn = event.target;
+
+    // Check if clicked element is a duplicate button
+    if (!btn.classList.contains("duplicate-btn")) return;
+
+    // Get the sticker ID from the button
+    const stickerId = btn.getAttribute("data-sticker-id");
+    if (!stickerId) return;
+
+    // Check if the sticker is owned (required to have duplicates)
+    // Only owned stickers can have duplicates
+    if (!ownedIds.has(stickerId)) {
+      // Optionally show a message or visual feedback
+      console.log("Cannot add duplicates to unowned sticker");
+      return;
+    }
+
+    // Get current count
+    const currentCount = getDuplicateCount(stickerId);
+
+    // Determine if this is plus or minus
+    const isPlus = btn.classList.contains("plus-btn");
+    const isMinus = btn.classList.contains("minus-btn");
+
+    let newCount = currentCount;
+
+    if (isPlus) {
+      // Increase count (no maximum limit)
+      newCount = currentCount + 1;
+    } else if (isMinus && currentCount > 0) {
+      // Decrease count (minimum 0)
+      newCount = currentCount - 1;
+    }
+
+    // Only update if count changed
+    if (newCount !== currentCount) {
+      setDuplicateCount(stickerId, newCount);
+    }
+  }
+
+  /**
+   * Exports the list of duplicate stickers to an Excel file.
+   *
+   * HOW IT WORKS:
+   * 1. Collects all sticker IDs with duplicate counts > 0
+   * 2. Sends POST request to /export-duplicates endpoint
+   * 3. Server generates Excel file with sticker details
+   * 4. Triggers file download in the browser
+   *
+   * This is useful for trading - you can share the Excel file
+   * with other collectors to show what duplicates you have available.
+   */
+  async function exportDuplicates() {
+    // Build the payload with sticker IDs and their duplicate counts
+    const duplicatesList = [];
+    for (const [stickerId, count] of Object.entries(duplicatesData)) {
+      if (count > 0) {
+        duplicatesList.push({ id: stickerId, count: count });
+      }
+    }
+
+    // If no duplicates, show message and return
+    if (duplicatesList.length === 0) {
+      alert("No tienes stickers duplicados para exportar.\n\nMarca stickers como duplicados usando los botones + y - en cada tarjeta.");
+      return;
+    }
+
+    const payload = { duplicates: duplicatesList };
+
+    try {
+      exportDuplicatesBtn.disabled = true;
+      exportDuplicatesBtn.textContent = "Generando…";
+
+      const response = await fetch("/export-duplicates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "duplicates_for_trade.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export duplicates Excel file", err);
+      alert("Ocurrió un error al generar el archivo Excel. Por favor intenta de nuevo.");
+    } finally {
+      exportDuplicatesBtn.disabled = false;
+      exportDuplicatesBtn.textContent = "📋 Export Duplicates";
+    }
+  }
+
+  /* -----------------------------------------------------------------------
    * Initialisation
    * --------------------------------------------------------------------- */
 
@@ -476,6 +763,21 @@
         closeStatsModal();
       }
     });
+
+    /* -----------------------------------------------------------------------
+     * Duplicate tracking event listeners
+     * --------------------------------------------------------------------- */
+
+    // Sync duplicate displays from localStorage on load
+    syncDuplicatesFromState();
+
+    // Handle clicks on + and - buttons for duplicates
+    document.addEventListener("click", handleDuplicateClick);
+
+    // Export duplicates button
+    if (exportDuplicatesBtn) {
+      exportDuplicatesBtn.addEventListener("click", exportDuplicates);
+    }
 
     // Optional: allow keyboard navigation with arrow keys.
     document.addEventListener("keydown", (event) => {
