@@ -1,102 +1,60 @@
 {% extends "base.html" %}
 
-{% block title %}Registro - Panini Album{% endblock %}
+{% block title %}Register - Panini Album{% endblock %}
 
 {% block content %}
 <section class="auth-section">
   <div class="auth-container">
     <header class="auth-header">
-      <h1 class="auth-title">📝 Crear Cuenta</h1>
-      <p class="auth-subtitle">Únete y guarda tu colección en la nube</p>
+      <h1 class="auth-title">📝 Create Account</h1>
+      <p class="auth-subtitle">Join and save your collection to the cloud</p>
     </header>
 
-    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-messages">
           {% for category, message in messages %}
-            <div class="flash flash-{{ category }}" role="alert">
-              {{ message }}
-            </div>
+            <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
 
     <form class="auth-form" method="POST" action="{{ url_for('auth.register') }}">
-      <!-- Username -->
       <div class="form-group">
-        <label for="username" class="form-label">Nombre de Usuario</label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          class="form-input"
-          placeholder="Elige un usuario (mín. 3 caracteres)"
-          required
-          minlength="3"
-          maxlength="80"
-          autofocus
-        />
-        <span class="form-hint">Solo letras, números y guiones bajos</span>
+        <label for="username" class="form-label">Username</label>
+        <input type="text" id="username" name="username" class="form-input"
+               placeholder="Choose a username (min. 3 characters)" required
+               minlength="3" maxlength="80" autofocus />
+        <span class="form-hint">Letters, numbers, and underscores only</span>
       </div>
 
-      <!-- Email -->
       <div class="form-group">
-        <label for="email" class="form-label">Correo Electrónico</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          class="form-input"
-          placeholder="tu@correo.com"
-          required
-        />
+        <label for="email" class="form-label">Email</label>
+        <input type="email" id="email" name="email" class="form-input"
+               placeholder="you@example.com" required />
       </div>
 
-      <!-- Password -->
       <div class="form-group">
-        <label for="password" class="form-label">Contraseña</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          class="form-input"
-          placeholder="Mínimo 6 caracteres"
-          required
-          minlength="6"
-        />
-        <span class="form-hint">Debe tener al menos 6 caracteres</span>
+        <label for="password" class="form-label">Password</label>
+        <input type="password" id="password" name="password" class="form-input"
+               placeholder="Minimum 6 characters" required minlength="6" />
+        <span class="form-hint">Must be at least 6 characters</span>
       </div>
 
-      <!-- Confirm Password -->
       <div class="form-group">
-        <label for="confirm_password" class="form-label">Confirmar Contraseña</label>
-        <input
-          type="password"
-          id="confirm_password"
-          name="confirm_password"
-          class="form-input"
-          placeholder="Repite tu contraseña"
-          required
-        />
+        <label for="confirm_password" class="form-label">Confirm Password</label>
+        <input type="password" id="confirm_password" name="confirm_password"
+               class="form-input" placeholder="Repeat your password" required />
       </div>
 
-      <!-- Submit Button -->
       <div class="form-group">
-        <button type="submit" class="btn btn-primary btn-block">
-          Crear Cuenta
-        </button>
+        <button type="submit" class="btn btn-primary btn-block">Create Account</button>
       </div>
     </form>
 
     <footer class="auth-footer">
-      <p>
-        ¿Ya tienes cuenta?
-        <a href="{{ url_for('auth.login') }}" class="auth-link">
-          Inicia sesión aquí
-        </a>
-      </p>
+      <p>Already have an account? <a href="{{ url_for('auth.login') }}" class="auth-link">Login here</a></p>
     </footer>
   </div>
 </section>

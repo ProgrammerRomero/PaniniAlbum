@@ -26,7 +26,7 @@ from flask_login import (
 )
 from flask_mail import Message
 
-from .models import db, User, PasswordResetToken
+from .models import db, User, PasswordResetToken, UserSticker
 from .utils import validate_email
 
 # Create blueprint
@@ -303,6 +303,8 @@ def profile():
 
     Displays user information and collection stats.
     """
+    from .config import ALBUM_PAGES
+
     # Count owned stickers
     owned_count = current_user.stickers.filter_by(is_owned=True).count()
 
@@ -311,13 +313,59 @@ def profile():
         user_id=current_user.id
     ).scalar() or 0
 
+    # Calculate total stickers in album
+    total_stickers = sum(
+        len(page.get("stickers", []))
+        for page in ALBUM_PAGES
+    )
+
+    # Calculate completion percentage
+    completion = round((owned_count / total_stickers) * 100) if total_stickers > 0 else 0
+
     stats = {
         "owned": owned_count,
         "duplicates": duplicates_count,
-        "member_since": current_user.created_at.strftime("%d/%m/%Y"),
+        "completion": completion,
+        "total": total_stickers,
     }
 
     return render_template("auth/profile.html", stats=stats)
+
+
+@auth_bp.route("/profile/upload-photo", methods=["POST"])
+@login_required
+def upload_photo():
+    """
+    Handle profile photo upload.
+
+    For now, this is a placeholder that stores a message.
+    Full implementation would save the file to a storage service.
+    """
+    if "photo" not in request.files:
+        flash("No photo selected.", "error")
+        return redirect(url_for("auth.profile"))
+
+    photo = request.files["photo"]
+
+    if photo.filename == "":
+        flash("No photo selected.", "error")
+        return redirect(url_for("auth.profile"))
+
+    # Validate file type
+    allowed_extensions = {"png", "jpg", "jpeg", "gif"}
+    file_ext = photo.filename.rsplit(".", 1)[1].lower() if "." in photo.filename else ""
+
+    if file_ext not in allowed_extensions:
+        flash("Invalid file type. Please use JPG, PNG, or GIF.", "error")
+        return redirect(url_for("auth.profile"))
+
+    # For now, just show a success message
+    # In production, you would:
+    # 1. Resize/compress the image
+    # 2. Save to file system or cloud storage (AWS S3, Cloudinary, etc.)
+    # 3. Store the URL in the user record
+    flash("Photo upload feature coming soon! 🎉", "info")
+    return redirect(url_for("auth.profile"))
 
 
 # =============================================================================

@@ -1,84 +1,53 @@
 {% extends "base.html" %}
 
-{% block title %}Iniciar Sesión - Panini Album{% endblock %}
+{% block title %}Login - Panini Album{% endblock %}
 
 {% block content %}
 <section class="auth-section">
   <div class="auth-container">
     <header class="auth-header">
-      <h1 class="auth-title">🔐 Iniciar Sesión</h1>
-      <p class="auth-subtitle">Accede a tu colección de stickers</p>
+      <h1 class="auth-title">🔐 Login</h1>
+      <p class="auth-subtitle">Access your sticker collection</p>
     </header>
 
-    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-messages">
           {% for category, message in messages %}
-            <div class="flash flash-{{ category }}" role="alert">
-              {{ message }}
-            </div>
+            <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
 
     <form class="auth-form" method="POST" action="{{ url_for('auth.login') }}">
-      <!-- Username or Email -->
       <div class="form-group">
-        <label for="username" class="form-label">Usuario o Correo Electrónico</label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          class="form-input"
-          placeholder="usuario o correo@ejemplo.com"
-          required
-          autofocus
-        />
+        <label for="username" class="form-label">Username or Email</label>
+        <input type="text" id="username" name="username" class="form-input"
+               placeholder="username or email@example.com" required autofocus />
       </div>
 
-      <!-- Password -->
       <div class="form-group">
-        <label for="password" class="form-label">Contraseña</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          class="form-input"
-          placeholder="Tu contraseña"
-          required
-        />
+        <label for="password" class="form-label">Password</label>
+        <input type="password" id="password" name="password" class="form-input"
+               placeholder="Your password" required />
       </div>
 
-      <!-- Remember Me -->
       <div class="form-group checkbox-group">
         <label class="checkbox-label">
           <input type="checkbox" name="remember" class="checkbox-input" />
-          <span>Mantener sesión iniciada</span>
+          <span>Keep me signed in</span>
         </label>
       </div>
 
-      <!-- Submit Button -->
       <div class="form-group">
-        <button type="submit" class="btn btn-primary btn-block">
-          Iniciar Sesión
-        </button>
+        <button type="submit" class="btn btn-primary btn-block">Login</button>
       </div>
     </form>
 
     <footer class="auth-footer">
-      <p>
-        <a href="{{ url_for('auth.forgot_password') }}" class="auth-link">
-          ¿Olvidaste tu contraseña?
-        </a>
-      </p>
-      <p>
-        ¿No tienes cuenta?
-        <a href="{{ url_for('auth.register') }}" class="auth-link">
-          Regístrate aquí
-        </a>
-      </p>
+      <p><a href="{{ url_for('auth.forgot_password') }}" class="auth-link">Forgot password?</a></p>
+      <p>Don't have an account? <a href="{{ url_for('auth.register') }}" class="auth-link">Register here</a></p>
     </footer>
   </div>
 </section>

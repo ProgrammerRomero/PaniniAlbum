@@ -607,7 +607,33 @@
   // ===========================================================================
 
   async function init() {
-    if (!track || pages.length === 0) return;
+    // ALWAYS initialize user dropdown (works on all pages including profile)
+    initUserDropdown();
+
+    // Logo click - go to cover page (works on all pages)
+    const logoHomeLink = document.getElementById("logoHomeLink");
+    if (logoHomeLink) {
+      logoHomeLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        // Only navigate if we have the album pages loaded
+        if (pages.length > 0) {
+          goToPageId("cover");
+        } else {
+          // On profile page, redirect to home
+          window.location.href = "/";
+        }
+      });
+    }
+
+    // Initialize teams dropdown (if present)
+    initDropdown();
+
+    // Album-specific initialization (only on album page)
+    if (!track || pages.length === 0) {
+      // We're on a page without the album (e.g., profile page)
+      // User dropdown is already initialized above
+      return;
+    }
 
     // Load user data first (from database or localStorage)
     await loadUserData();
@@ -616,8 +642,6 @@
     syncCheckboxesFromState();
     syncDuplicatesFromState();
     updatePagePosition();
-    initDropdown();
-    initUserDropdown();
 
     // Event listeners
     document.addEventListener("change", handleCheckboxChange);
@@ -653,15 +677,6 @@
     document.addEventListener("click", handleDuplicateClick);
     if (exportDuplicatesBtn) {
       exportDuplicatesBtn.addEventListener("click", exportDuplicates);
-    }
-
-    // Logo click - go to cover page (first page)
-    const logoHomeLink = document.getElementById("logoHomeLink");
-    if (logoHomeLink) {
-      logoHomeLink.addEventListener("click", (event) => {
-        event.preventDefault(); // Prevent default link behavior
-        goToPageId("cover"); // Navigate to cover page
-      });
     }
 
     // Keyboard navigation

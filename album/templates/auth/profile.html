@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Mi Perfil - Panini Album{% endblock %}
+{% block title %}My Profile - Panini Album{% endblock %}
 
 {% block content %}
 <section class="auth-section">
-  <div class="auth-container">
+  <div class="auth-container profile-container">
     <header class="auth-header">
-      <h1 class="auth-title">👤 Mi Perfil</h1>
-      <p class="auth-subtitle">{{ current_user.username }}</p>
+      <h1 class="auth-title">👤 My Profile</h1>
+      <p class="auth-subtitle">Manage your account and preferences</p>
     </header>
 
     <!-- Flash messages -->
@@ -23,51 +23,359 @@
       {% endif %}
     {% endwith %}
 
-    <div class="profile-info">
-      <div class="profile-stats"
-        <h2>Estadísticas de tu Colección</h2>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <span class="stat-value">{{ stats.owned }}</span>
-            <span class="stat-label">Stickers Obtenidos</span>
+    <div class="profile-layout">
+      <!-- LEFT COLUMN: Photo Section -->
+      <div class="profile-photo-section">
+        <div class="profile-photo-wrapper">
+          <div class="profile-photo" id="profilePhoto">
+            {% if current_user.photo_url %}
+              <img src="{{ current_user.photo_url }}" alt="Profile Photo" class="photo-img">
+            {% else %}
+              <div class="photo-placeholder">
+                <span class="photo-initials">{{ current_user.username[0]|upper }}</span>
+              </div>
+            {% endif %}
           </div>
-
-          <div class="stat-card">
-            <span class="stat-value">{{ stats.duplicates }}</span>
-            <span class="stat-label">Duplicados para Intercambio</span>
-          </div>
-
-          <div class="stat-card">
-            <span class="stat-value">{{ stats.member_since }}</span>
-            <span class="stat-label">Miembro Desde</span>
-          </div>
+          <!-- Photo Upload Form -->
+          <form method="POST" action="{{ url_for('auth.upload_photo') }}" enctype="multipart/form-data" class="photo-upload-form">
+            <label for="photoUpload" class="btn btn-secondary btn-sm photo-upload-btn">
+              📷 Upload Photo
+            </label>
+            <input
+              type="file"
+              id="photoUpload"
+              name="photo"
+              accept="image/*"
+              class="photo-input"
+              onchange="this.form.submit()"
+            >
+          </form>
+          <p class="photo-hint">Max 2MB, JPG/PNG</p>
         </div>
       </div>
 
-      <div class="profile-account">
-        <h2>Información de la Cuenta</h2>
+      <!-- RIGHT COLUMN: User Details -->
+      <div class="profile-details-section">
 
-        <div class="account-details">
-          <div class="detail-row">
-            <span class="detail-label">Usuario:</span>
-            <span class="detail-value">{{ current_user.username }}</span>
-          </div>
+        <!-- Account Information -->
+        <div class="profile-card">
+          <h2 class="card-title">📋 Account Information</h2>
 
-          <div class="detail-row">
-            <span class="detail-label">Correo:</span>
-            <span class="detail-value">{{ current_user.email }}</span>
+          <div class="detail-list">
+            <div class="detail-item">
+              <span class="detail-label">Username:</span>
+              <span class="detail-value">{{ current_user.username }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Email:</span>
+              <span class="detail-value">{{ current_user.email }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Member Since:</span>
+              <span class="detail-value">{{ current_user.created_at.strftime('%B %d, %Y') }}</span>
+            </div>
+
+            {% if current_user.last_login %}
+            <div class="detail-item">
+              <span class="detail-label">Last Login:</span>
+              <span class="detail-value">{{ current_user.last_login.strftime('%B %d, %Y at %I:%M %p') }}</span>
+            </div>
+            {% endif %}
           </div>
         </div>
+
+        <!-- Collection Stats -->
+        <div class="profile-card">
+          <h2 class="card-title">📊 Collection Stats</h2>
+
+          <div class="stats-grid profile-stats-grid">
+            <div class="stat-item">
+              <span class="stat-number">{{ stats.owned }}</span>
+              <span class="stat-name">Stickers Owned</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">{{ stats.duplicates }}</span>
+              <span class="stat-name">For Trade</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">{{ stats.completion }}%</span>
+              <span class="stat-name">Complete</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Section -->
+        <div class="profile-card">
+          <h2 class="card-title">🔒 Security</h2>
+
+          <div class="security-options">
+            <a href="{{ url_for('auth.forgot_password') }}" class="security-link">
+              <span class="security-icon">🔑</span>
+              <div class="security-info">
+                <span class="security-title">Change Password</span>
+                <span class="security-desc">Update your account password</span>
+              </div>
+              <span class="security-arrow">›</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="profile-actions">
+          <a href="{{ url_for('album.index') }}" class="btn btn-primary">
+            ← Back to Album
+          </a>
+
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">
+            🚪 Log Out
+          </a>
+        </div>
+
       </div>
     </div>
-
-    <footer class="auth-footer">
-      <p>
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">
-          Cerrar Sesión
-        </a>
-      </p>
-    </footer>
   </div>
 </section>
+
+<style>
+/* Profile Page Specific Styles */
+
+.profile-container {
+  max-width: 800px;
+  width: 100%;
+}
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+/* Photo Section */
+.profile-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-photo-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-photo {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--color-accent);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+  background: var(--color-bg-elevated);
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+}
+
+.photo-initials {
+  font-size: 4rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.photo-upload-form {
+  width: 100%;
+}
+
+.photo-upload-btn {
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+}
+
+.photo-input {
+  display: none;
+}
+
+.photo-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+/* Details Section */
+.profile-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 0.75rem;
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+/* Stats Grid */
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(56, 189, 248, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.stat-number {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.stat-name {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* Security Section */
+.security-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.security-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+}
+
+.security-link:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: var(--color-accent);
+  transform: translateX(4px);
+}
+
+.security-icon {
+  font-size: 1.5rem;
+}
+
+.security-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.security-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.security-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.security-arrow {
+  font-size: 1.5rem;
+  color: var(--color-text-muted);
+}
+
+/* Actions */
+.profile-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .profile-photo-section {
+    order: -1;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+</style>
 {% endblock %}
