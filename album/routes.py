@@ -4,8 +4,10 @@ from io import BytesIO
 from typing import List, Set
 
 from flask import Blueprint, jsonify, render_template, request, send_file
+from flask_login import current_user, login_required
 
 from .config import ALBUM_PAGES, team_pages_by_code
+from .models import db, UserSticker
 
 bp = Blueprint("album", __name__)
 
@@ -219,4 +221,137 @@ def export_duplicates():
         as_attachment=True,
         download_name="duplicates_for_trade.xlsx",
     )
+
+
+# =============================================================================
+# DATABASE API ENDPOINTS (for logged-in users)
+# =============================================================================
+
+@bp.route("/api/user/stickers", methods=["GET"])
+@login_required
+def get_user_stickers():
+    """
+    Get all stickers owned by the current user.
+
+    Returns JSON with:
+        - owned: list of sticker IDs the user owns
+        - duplicates: dict of sticker_id -> count
+
+    This replaces the localStorage data when user is logged in.
+    """
+    stickers = current_user.stickers.all()
+
+    owned = []
+    duplicates = {}
+
+    for s in stickers:
+        if s.is_owned:
+            owned.append(s.sticker_id)
+        if s.duplicate_count > 0:
+            duplicates[s.sticker_id] = s.duplicate_count
+
+    return jsonify({
+        "owned": owned,
+        "duplicates": duplicates,
+    })
+
+
+@bp.route("/api/sticker/own", methods=["POST"])
+@login_required
+def update_sticker_ownership():
+    """
+    Update ownership status of a sticker.
+
+    Request body:
+        - sticker_id: The sticker ID (e.g., "ARG-1")
+        - is_owned: Boolean indicating if user owns it
+
+    Saves to database for persistent storage.
+    """
+    data = request.get_json(silent=True) or {}
+    sticker_id = data.get("sticker_id", "").strip()
+    is_owned = bool(data.get("is_owned", False))
+
+    if not sticker_id:
+        return jsonify({"error": "sticker_id is required"}), 400
+
+    # Find or create the sticker record
+    user_sticker = UserSticker.query.filter_by(
+        user_id=current_user.id,
+        sticker_id=sticker_id
+    ).first()
+
+    if user_sticker:
+        user_sticker.is_owned = is_owned
+        # If unmarking as owned, clear duplicates too
+        if not is_owned:
+            user_sticker.duplicate_count = 0
+    else:
+        user_sticker = UserSticker(
+            user_id=current_user.id,
+            sticker_id=sticker_id,
+            is_owned=is_owned,
+            duplicate_count=0,
+        )
+        db.session.add(user_sticker)
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "sticker_id": sticker_id,
+        "is_owned": is_owned,
+    })
+
+
+@bp.route("/api/sticker/duplicate", methods=["POST"])
+@login_required
+def update_sticker_duplicate():
+    """
+    Update duplicate count for a sticker.
+
+    Request body:
+        - sticker_id: The sticker ID
+        - count: Number of duplicates (0 or more)
+
+    Only works if the sticker is marked as owned.
+    """
+    data = request.get_json(silent=True) or {}
+    sticker_id = data.get("sticker_id", "").strip()
+    count = int(data.get("count", 0))
+
+    if not sticker_id:
+        return jsonify({"error": "sticker_id is required"}), 400
+
+    if count < 0:
+        count = 0
+
+    # Find or create the sticker record
+    user_sticker = UserSticker.query.filter_by(
+        user_id=current_user.id,
+        sticker_id=sticker_id
+    ).first()
+
+    if user_sticker:
+        user_sticker.duplicate_count = count
+        # Automatically mark as owned if duplicates exist
+        if count > 0:
+            user_sticker.is_owned = True
+    else:
+        # If setting duplicates, also mark as owned
+        user_sticker = UserSticker(
+            user_id=current_user.id,
+            sticker_id=sticker_id,
+            is_owned=count > 0,
+            duplicate_count=count,
+        )
+        db.session.add(user_sticker)
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "sticker_id": sticker_id,
+        "duplicate_count": count,
+    })
 

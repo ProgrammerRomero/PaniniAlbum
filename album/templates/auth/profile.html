@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil - Panini Album{% endblock %}
+
+{% block content %}
+<section class="auth-section">
+  <div class="auth-container">
+    <header class="auth-header">
+      <h1 class="auth-title">👤 Mi Perfil</h1>
+      <p class="auth-subtitle">{{ current_user.username }}</p>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="profile-info">
+      <div class="profile-stats"
+        <h2>Estadísticas de tu Colección</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-value">{{ stats.owned }}</span>
+            <span class="stat-label">Stickers Obtenidos</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-value">{{ stats.duplicates }}</span>
+            <span class="stat-label">Duplicados para Intercambio</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-value">{{ stats.member_since }}</span>
+            <span class="stat-label">Miembro Desde</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-account">
+        <h2>Información de la Cuenta</h2>
+
+        <div class="account-details">
+          <div class="detail-row">
+            <span class="detail-label">Usuario:</span>
+            <span class="detail-value">{{ current_user.username }}</span>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">Correo:</span>
+            <span class="detail-value">{{ current_user.email }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="auth-footer">
+      <p>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">
+          Cerrar Sesión
+        </a>
+      </p>
+    </footer>
+  </div>
+</section>
+{% endblock %}

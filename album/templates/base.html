@@ -14,10 +14,14 @@
   <header class="app-header">
     <nav class="navbar">
       <div class="navbar-left">
-        <div class="navbar-logo">
+        <!--
+          LOGO LINK TO HOME (Cover Page)
+          Clicking the logo returns to the first page (FIFA World Cup 2026 cover)
+        -->
+        <a href="#" class="navbar-logo" id="logoHomeLink" title="Ir a la página de inicio">
           <span class="logo-mark">⚽</span>
           <span class="logo-text">Panini Album 2026 - JULIAN ROMERO</span>
-        </div>
+        </a>
       </div>
 
       <div class="navbar-center">
@@ -38,27 +42,55 @@
       </div>
 
       <div class="navbar-right">
-        <!--
-          STATS BUTTON:
-          Opens a modal that displays collection statistics including:
-          - Overall completion percentage
-          - Total owned vs total stickers
-          - Per-team progress bars
-        -->
-        <button id="statsBtn" class="btn-secondary" type="button">
-          📊 Stats
-        </button>
-        <!--
-          EXPORT DUPLICATES BUTTON:
-          Generates an Excel file listing all stickers marked as duplicates.
-          Useful for trading with other collectors.
-        -->
-        <button id="exportDuplicatesBtn" class="btn-secondary" type="button">
-          📋 Export Duplicates
-        </button>
-        <button id="exportMissingBtn" class="btn-primary" type="button">
-          Export Missing (Excel)
-        </button>
+        {% if current_user.is_authenticated %}
+          <!--
+            USER MENU (when logged in)
+            Shows username with dropdown to profile and logout
+          -->
+          <div class="dropdown user-dropdown" id="userDropdown">
+            <button class="dropdown-toggle user-toggle" type="button">
+              👤 {{ current_user.username }}
+              <span class="dropdown-caret">▼</span>
+            </button>
+            <div class="dropdown-menu user-menu">
+              <a href="{{ url_for('auth.profile') }}" class="dropdown-item">Mi Perfil</a>
+              <a href="{{ url_for('auth.logout') }}" class="dropdown-item">Cerrar Sesión</a>
+            </div>
+          </div>
+
+          <!--
+            STATS BUTTON:
+            Opens a modal that displays collection statistics including:
+            - Overall completion percentage
+            - Total owned vs total stickers
+            - Per-team progress bars
+          -->
+          <button id="statsBtn" class="btn-secondary" type="button">
+            📊 Stats
+          </button>
+          <!--
+            EXPORT DUPLICATES BUTTON:
+            Generates an Excel file listing all stickers marked as duplicates.
+            Useful for trading with other collectors.
+          -->
+          <button id="exportDuplicatesBtn" class="btn-secondary" type="button">
+            📋 Export Duplicates
+          </button>
+          <button id="exportMissingBtn" class="btn-primary" type="button">
+            Export Missing (Excel)
+          </button>
+
+        {% else %}
+          <!--
+            LOGIN/REGISTER LINKS (when not logged in)
+          -->
+          <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">
+            Iniciar Sesión
+          </a>
+          <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+            Registrarse
+          </a>
+        {% endif %}
       </div>
     </nav>
   </header>
