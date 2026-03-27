@@ -17,6 +17,7 @@ from flask import (
     flash,
     current_app,
     abort,
+    jsonify,
 )
 from flask_login import (
     login_user,
@@ -24,7 +25,7 @@ from flask_login import (
     login_required,
     current_user,
 )
-from flask_mail import Message
+from flask_mail import Message, Mail
 
 from .models import db, User, PasswordResetToken, UserSticker, bcrypt
 from .utils import validate_email
@@ -492,9 +493,130 @@ def users():
     )
 
 
-# =============================================================================
-# UTILITY FUNCTIONS
-# =============================================================================
+@auth_bp.route("/api/send-trade-message", methods=["POST"])
+@login_required
+def send_trade_message():
+    """
+    Send a trade request email to another user.
+
+    Request body (JSON):
+        - recipient_username: Username of the person to contact
+        - stickers: List of sticker IDs being requested/offered
+        - message: The custom message from the sender
+        - trade_type: 'receive' (requesting stickers) or 'give' (offering stickers)
+
+    Returns:
+        JSON with success status and message
+    """
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"success": False, "error": "No data provided"}), 400
+
+    recipient_username = data.get("recipient_username", "").strip()
+    stickers = data.get("stickers", [])
+    message_text = data.get("message", "").strip()
+    trade_type = data.get("trade_type", "receive")
+
+    # Validation
+    if not recipient_username:
+        return jsonify({"success": False, "error": "Recipient username is required"}), 400
+
+    if not stickers or not isinstance(stickers, list):
+        return jsonify({"success": False, "error": "At least one sticker must be selected"}), 400
+
+    if not message_text:
+        return jsonify({"success": False, "error": "Message is required"}), 400
+
+    # Find recipient user
+    recipient = User.query.filter_by(username=recipient_username).first()
+    if not recipient:
+        return jsonify({"success": False, "error": "Recipient not found"}), 404
+
+    # Prevent self-messaging
+    if recipient.id == current_user.id:
+        return jsonify({"success": False, "error": "Cannot send trade request to yourself"}), 400
+
+    try:
+        # Prepare email
+        sticker_list = ", ".join(stickers)
+        trade_action = "requests" if trade_type == "receive" else "offers"
+
+        subject = f"Trade Request from {current_user.username} - {len(stickers)} stickers"
+
+        body = f"""Hello {recipient.username},
+
+{current_user.username} ({current_user.email}) has sent you a trade request on Panini Album!
+
+Trade Details:
+- Action: They want to {trade_action} stickers
+- Stickers: {sticker_list}
+
+Message from {current_user.username}:
+---
+{message_text}
+---
+
+To respond, simply reply to this email.
+
+Happy trading!
+The Panini Album Team
+"""
+
+        html_body = f"""
+<h2>Trade Request from {current_user.username}</h2>
+
+<p>Hello <strong>{recipient.username}</strong>,</p>
+
+<p><strong>{current_user.username}</strong> (<a href="mailto:{current_user.email}">{current_user.email}</a>)
+has sent you a trade request on Panini Album!</p>
+
+<div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="margin-top: 0;">Trade Details:</h3>
+    <p><strong>Action:</strong> They want to {trade_action} stickers</p>
+    <p><strong>Stickers ({len(stickers)}):</strong> {sticker_list}</p>
+</div>
+
+<div style="background: #e0f2fe; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0284c7;">
+    <h3 style="margin-top: 0;">Message from {current_user.username}:</h3>
+    <p style="white-space: pre-wrap;">{message_text}</p>
+</div>
+
+<p><strong>To respond:</strong> Simply reply to this email or contact them at
+<a href="mailto:{current_user.email}">{current_user.email}</a>.</p>
+
+<p>Happy trading!<br><em>The Panini Album Team</em></p>
+"""
+
+        # Send email
+        msg = Message(
+            subject=subject,
+            recipients=[recipient.email],
+            body=body,
+            html=html_body,
+            reply_to=current_user.email
+        )
+
+        mail = Mail(current_app)
+        mail.send(msg)
+
+        # Log success (in production, you might want to log to database)
+        current_app.logger.info(
+            f"Trade email sent from {current_user.username} to {recipient.username} "
+            f"for {len(stickers)} stickers"
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Trade request sent to {recipient.username} successfully!"
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Failed to send trade email: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to send email. Please try again later."
+        }), 500
 
 def send_password_reset_email(to_email: str, token: str):
     """

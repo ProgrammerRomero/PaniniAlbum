@@ -40,10 +40,19 @@ def create_app() -> Flask:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///album.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    # Mail configuration (Console mode for development)
-    # In production, configure with real SMTP server (SendGrid, Mailgun, etc.)
-    app.config["MAIL_SUPPRESS_SEND"] = True  # Console output instead of sending
+    # Mail configuration
+    # For development: emails print to console
+    # For production: configure with real SMTP server (see EMAIL_CONFIG.md)
+    app.config["MAIL_SUPPRESS_SEND"] = True  # Set to False to actually send emails
     app.config["MAIL_DEFAULT_SENDER"] = ("Panini Album", "noreply@paninialbum.local")
+
+    # SMTP Settings (only used when MAIL_SUPPRESS_SEND = False)
+    # Uncomment and fill in for your email provider:
+    # app.config["MAIL_SERVER"] = "smtp.gmail.com"      # or smtp.sendgrid.net
+    # app.config["MAIL_PORT"] = 587
+    # app.config["MAIL_USE_TLS"] = True
+    # app.config["MAIL_USERNAME"] = "your-email@gmail.com"
+    # app.config["MAIL_PASSWORD"] = "your-app-password"  # NOT your regular password!
 
     # =========================================================================
     # INITIALIZE EXTENSIONS
