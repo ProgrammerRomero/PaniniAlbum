@@ -1,0 +1,9 @@
+DELET A FULL USER:
+
+
+  DELETE FROM password_reset_tokens WHERE user_id = 1;
+  DELETE FROM user_stickers WHERE user_id = 1;
+  DELETE FROM users WHERE id = 1;
+
+
+

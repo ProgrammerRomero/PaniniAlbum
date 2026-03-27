@@ -368,6 +368,43 @@ def upload_photo():
     return redirect(url_for("auth.profile"))
 
 
+@auth_bp.route("/delete-account", methods=["POST"])
+@login_required
+def delete_account():
+    """
+    Delete the current user's account and all associated data.
+
+    This action:
+    1. Removes all password reset tokens
+    2. Removes all user stickers (via cascade)
+    3. Removes the user account
+    4. Logs the user out
+
+    This action is irreversible.
+    """
+    try:
+        user = current_user
+
+        # Delete password reset tokens first (foreign key constraint safety)
+        PasswordResetToken.query.filter_by(user_id=user.id).delete()
+
+        # Delete user (cascade will handle user_stickers)
+        db.session.delete(user)
+        db.session.commit()
+
+        # Log out the user
+        logout_user()
+
+        flash("Your account has been deleted. We're sorry to see you go! 👋", "info")
+        return redirect(url_for("auth.login"))
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Account deletion error: {e}")
+        flash("An error occurred while deleting your account. Please try again.", "error")
+        return redirect(url_for("auth.profile"))
+
+
 # =============================================================================
 # OTHER USERS (Trading Partners)
 # =============================================================================
