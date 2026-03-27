@@ -43,6 +43,25 @@ class User(UserMixin, db.Model):
         cascade="all, delete-orphan"
     )
 
+    # Reliability stars for trade completion
+    star_count = db.Column(db.Integer, default=0)
+
+    # Relationships for messages
+    sent_messages = db.relationship(
+        "Message",
+        foreign_keys="Message.sender_id",
+        back_populates="sender",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )
+    received_messages = db.relationship(
+        "Message",
+        foreign_keys="Message.recipient_id",
+        back_populates="recipient",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )
+
     def __init__(self, username: str, email: str, password: str):
         """
         Create a new user with hashed password.
@@ -195,3 +214,163 @@ class PasswordResetToken(db.Model):
 
     def __repr__(self) -> str:
         return f"<PasswordResetToken user={self.user_id} valid={self.is_valid()}>"
+
+
+class Message(db.Model):
+    """
+    Internal messaging between users.
+
+    Stores conversations for the in-app messaging system.
+    Messages can optionally be linked to a trade.
+    """
+
+    __tablename__ = "messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    is_read = db.Column(db.Boolean, default=False)
+    read_at = db.Column(db.DateTime, nullable=True)
+    trade_id = db.Column(db.Integer, db.ForeignKey("trades.id"), nullable=True, index=True)
+
+    # Relationships
+    sender = db.relationship("User", foreign_keys=[sender_id], back_populates="sent_messages")
+    recipient = db.relationship("User", foreign_keys=[recipient_id], back_populates="received_messages")
+    trade = db.relationship("Trade", back_populates="messages")
+
+    def __init__(self, sender_id: int, recipient_id: int, content: str, trade_id: int = None):
+        self.sender_id = sender_id
+        self.recipient_id = recipient_id
+        self.content = content
+        self.trade_id = trade_id
+
+    def mark_as_read(self):
+        """Mark message as read."""
+        self.is_read = True
+        self.read_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "sender_id": self.sender_id,
+            "sender_username": self.sender.username if self.sender else None,
+            "recipient_id": self.recipient_id,
+            "content": self.content,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "is_read": self.is_read,
+            "trade_id": self.trade_id,
+        }
+
+    def __repr__(self) -> str:
+        return f"<Message from={self.sender_id} to={self.recipient_id}>"
+
+
+class Trade(db.Model):
+    """
+    Tracks trade transactions between users.
+
+    A trade represents an exchange of stickers between two users.
+    Status: pending -> completed (both confirm) or cancelled
+    """
+
+    __tablename__ = "trades"
+
+    id = db.Column(db.Integer, primary_key=True)
+    initiator_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    status = db.Column(db.String(20), default="pending")  # pending, completed, cancelled
+    stickers_offered = db.Column(db.Text)  # JSON list of sticker IDs
+    stickers_requested = db.Column(db.Text)  # JSON list of sticker IDs
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    initiator = db.relationship("User", foreign_keys=[initiator_id])
+    recipient = db.relationship("User", foreign_keys=[recipient_id])
+    messages = db.relationship("Message", back_populates="trade", lazy="dynamic", cascade="all, delete-orphan")
+    confirmations = db.relationship("TradeConfirmation", back_populates="trade", lazy="dynamic", cascade="all, delete-orphan")
+
+    def __init__(self, initiator_id: int, recipient_id: int, stickers_offered: str = "[]", stickers_requested: str = "[]"):
+        self.initiator_id = initiator_id
+        self.recipient_id = recipient_id
+        self.stickers_offered = stickers_offered
+        self.stickers_requested = stickers_requested
+        self.status = "pending"
+
+    def is_fully_confirmed(self) -> bool:
+        """Check if both users have confirmed the trade."""
+        confirmed_users = {c.user_id for c in self.confirmations}
+        return len(confirmed_users) == 2
+
+    def complete_trade(self):
+        """Mark trade as completed and award stars to both users."""
+        if self.status == "completed":
+            return
+
+        self.status = "completed"
+        self.completed_at = datetime.now(timezone.utc)
+
+        # Award stars to both users
+        from flask import current_app
+        initiator = User.query.get(self.initiator_id)
+        recipient = User.query.get(self.recipient_id)
+
+        if initiator:
+            initiator.star_count += 1
+        if recipient:
+            recipient.star_count += 1
+
+        db.session.commit()
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        import json
+        return {
+            "id": self.id,
+            "initiator_id": self.initiator_id,
+            "initiator_username": self.initiator.username if self.initiator else None,
+            "recipient_id": self.recipient_id,
+            "recipient_username": self.recipient.username if self.recipient else None,
+            "status": self.status,
+            "stickers_offered": json.loads(self.stickers_offered) if self.stickers_offered else [],
+            "stickers_requested": json.loads(self.stickers_requested) if self.stickers_requested else [],
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "is_fully_confirmed": self.is_fully_confirmed(),
+        }
+
+    def __repr__(self) -> str:
+        return f"<Trade id={self.id} status={self.status}>"
+
+
+class TradeConfirmation(db.Model):
+    """
+    Records when a user confirms a trade is complete.
+
+    Both users must confirm for trade to be marked complete and stars awarded.
+    """
+
+    __tablename__ = "trade_confirmations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    trade_id = db.Column(db.Integer, db.ForeignKey("trades.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    confirmed_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    trade = db.relationship("Trade", back_populates="confirmations")
+    user = db.relationship("User")
+
+    # Unique constraint: each user can only confirm a trade once
+    __table_args__ = (db.UniqueConstraint("trade_id", "user_id", name="unique_trade_confirmation"),)
+
+    def __init__(self, trade_id: int, user_id: int):
+        self.trade_id = trade_id
+        self.user_id = user_id
+
+    def __repr__(self) -> str:
+        return f"<TradeConfirmation trade={self.trade_id} user={self.user_id}>"

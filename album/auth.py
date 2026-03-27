@@ -7,6 +7,7 @@ All routes use CSRF protection (via Flask-WTF implicitly) and secure password ha
 
 from datetime import datetime, timezone
 from functools import wraps
+import json
 
 from flask import (
     Blueprint,
@@ -27,7 +28,7 @@ from flask_login import (
 )
 from flask_mail import Message, Mail
 
-from .models import db, User, PasswordResetToken, UserSticker, bcrypt
+from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation
 from .utils import validate_email
 
 # Create blueprint
@@ -663,3 +664,313 @@ Si no solicitaste este cambio, ignora este correo.
             html=render_template("emails/reset_password.html", reset_url=reset_url),
         )
         mail.send(msg)
+
+
+# =============================================================================
+# MESSAGING SYSTEM
+# =============================================================================
+
+@auth_bp.route("/messages")
+@login_required
+def messages_inbox():
+    """
+    Display the user's message inbox.
+
+    Shows all conversations grouped by other user.
+    """
+    # Get all messages where user is sender or recipient
+    sent = current_user.sent_messages.order_by(Message.created_at.desc()).all()
+    received = current_user.received_messages.order_by(Message.created_at.desc()).all()
+
+    # Group messages by conversation partner
+    conversations = {}
+
+    for msg in sent + received:
+        # Determine the other user in the conversation
+        other_user_id = msg.recipient_id if msg.sender_id == current_user.id else msg.sender_id
+        other_user = User.query.get(other_user_id)
+
+        if not other_user:
+            continue
+
+        if other_user_id not in conversations:
+            conversations[other_user_id] = {
+                "user": other_user,
+                "last_message": msg,
+                "unread_count": 0,
+                "message_count": 0
+            }
+
+        # Track unread messages
+        if msg.recipient_id == current_user.id and not msg.is_read:
+            conversations[other_user_id]["unread_count"] += 1
+
+        conversations[other_user_id]["message_count"] += 1
+
+        # Update last message if this is more recent
+        if msg.created_at > conversations[other_user_id]["last_message"].created_at:
+            conversations[other_user_id]["last_message"] = msg
+
+    # Sort by last message time
+    sorted_conversations = sorted(
+        conversations.values(),
+        key=lambda x: x["last_message"].created_at,
+        reverse=True
+    )
+
+    return render_template("auth/messages.html", conversations=sorted_conversations)
+
+
+@auth_bp.route("/messages/<username>")
+@login_required
+def messages_conversation(username):
+    """
+    Display conversation thread with a specific user.
+
+    Shows all messages between current user and the specified user.
+    """
+    other_user = User.query.filter_by(username=username).first_or_404()
+
+    if other_user.id == current_user.id:
+        flash("Cannot message yourself.", "error")
+        return redirect(url_for("auth.messages_inbox"))
+
+    # Get all messages between these two users
+    messages = Message.query.filter(
+        ((Message.sender_id == current_user.id) & (Message.recipient_id == other_user.id)) |
+        ((Message.sender_id == other_user.id) & (Message.recipient_id == current_user.id))
+    ).order_by(Message.created_at.asc()).all()
+
+    # Mark received messages as read
+    for msg in messages:
+        if msg.recipient_id == current_user.id and not msg.is_read:
+            msg.mark_as_read()
+
+    # Get active trade if any
+    trade = Trade.query.filter(
+        ((Trade.initiator_id == current_user.id) & (Trade.recipient_id == other_user.id)) |
+        ((Trade.initiator_id == other_user.id) & (Trade.recipient_id == current_user.id)),
+        Trade.status == "pending"
+    ).order_by(Trade.created_at.desc()).first()
+
+    # Check if current user has confirmed the trade
+    trade_confirmed = False
+    stickers_offered = []
+    stickers_requested = []
+
+    if trade:
+        trade_confirmed = TradeConfirmation.query.filter_by(
+            trade_id=trade.id,
+            user_id=current_user.id
+        ).first() is not None
+
+        # Parse stickers JSON for template
+        if trade.stickers_offered:
+            stickers_offered = json.loads(trade.stickers_offered)
+        if trade.stickers_requested:
+            stickers_requested = json.loads(trade.stickers_requested)
+
+    return render_template(
+        "auth/conversation.html",
+        other_user=other_user,
+        messages=messages,
+        trade=trade,
+        trade_confirmed=trade_confirmed,
+        now=datetime.now(timezone.utc),
+        stickers_offered=stickers_offered,
+        stickers_requested=stickers_requested
+    )
+
+
+@auth_bp.route("/api/messages/send", methods=["POST"])
+@login_required
+def send_message():
+    """
+    API endpoint to send a message to another user.
+
+    Request body (JSON):
+        - recipient_username: Username of recipient
+        - content: Message content
+        - trade_id: Optional trade ID to link message to
+        - stickers: Optional list of stickers for trade context
+
+    Returns:
+        JSON with success status
+    """
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"success": False, "error": "No data provided"}), 400
+
+    recipient_username = data.get("recipient_username", "").strip()
+    content = data.get("content", "").strip()
+    trade_id = data.get("trade_id")
+    stickers = data.get("stickers", [])
+    trade_type = data.get("trade_type", "receive")
+
+    # Validation
+    if not recipient_username:
+        return jsonify({"success": False, "error": "Recipient is required"}), 400
+
+    if not content:
+        return jsonify({"success": False, "error": "Message content is required"}), 400
+
+    # Find recipient
+    recipient = User.query.filter_by(username=recipient_username).first()
+    if not recipient:
+        return jsonify({"success": False, "error": "Recipient not found"}), 404
+
+    if recipient.id == current_user.id:
+        return jsonify({"success": False, "error": "Cannot send message to yourself"}), 400
+
+    try:
+        # If stickers provided and no trade_id, create a trade
+        if stickers and not trade_id:
+            import json
+            if trade_type == "receive":
+                # User wants stickers from recipient
+                new_trade = Trade(
+                    initiator_id=current_user.id,
+                    recipient_id=recipient.id,
+                    stickers_requested=json.dumps(stickers),
+                    stickers_offered="[]"
+                )
+            else:
+                # User offers stickers to recipient
+                new_trade = Trade(
+                    initiator_id=current_user.id,
+                    recipient_id=recipient.id,
+                    stickers_offered=json.dumps(stickers),
+                    stickers_requested="[]"
+                )
+            db.session.add(new_trade)
+            db.session.flush()  # Get trade.id
+            trade_id = new_trade.id
+
+        # Create message
+        message = Message(
+            sender_id=current_user.id,
+            recipient_id=recipient.id,
+            content=content,
+            trade_id=trade_id
+        )
+        db.session.add(message)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Message sent successfully",
+            "message_id": message.id,
+            "trade_id": trade_id
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to send message: {e}")
+        return jsonify({"success": False, "error": "Failed to send message"}), 500
+
+
+@auth_bp.route("/api/messages/unread-count")
+@login_required
+def unread_count():
+    """
+    Get count of unread messages for current user.
+    """
+    count = current_user.received_messages.filter_by(is_read=False).count()
+    return jsonify({"count": count})
+
+
+@auth_bp.route("/api/messages/mark-read", methods=["POST"])
+@login_required
+def mark_messages_read():
+    """
+    Mark messages from a specific user as read.
+
+    Request body (JSON):
+        - sender_id: ID of sender whose messages to mark as read
+    """
+    data = request.get_json() or {}
+    sender_id = data.get("sender_id")
+
+    if not sender_id:
+        return jsonify({"success": False, "error": "Sender ID required"}), 400
+
+    try:
+        messages = Message.query.filter_by(
+            sender_id=sender_id,
+            recipient_id=current_user.id,
+            is_read=False
+        ).all()
+
+        for msg in messages:
+            msg.is_read = True
+            msg.read_at = datetime.now(timezone.utc)
+
+        db.session.commit()
+        return jsonify({"success": True, "marked_count": len(messages)})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to mark messages as read: {e}")
+        return jsonify({"success": False, "error": "Failed to update messages"}), 500
+
+
+@auth_bp.route("/api/trade/confirm", methods=["POST"])
+@login_required
+def confirm_trade():
+    """
+    Confirm a trade as complete.
+
+    Both users must confirm before trade is marked complete and stars awarded.
+
+    Request body (JSON):
+        - trade_id: ID of trade to confirm
+    """
+    data = request.get_json() or {}
+    trade_id = data.get("trade_id")
+
+    if not trade_id:
+        return jsonify({"success": False, "error": "Trade ID required"}), 400
+
+    trade = Trade.query.get(trade_id)
+    if not trade:
+        return jsonify({"success": False, "error": "Trade not found"}), 404
+
+    # Verify user is part of this trade
+    if current_user.id not in [trade.initiator_id, trade.recipient_id]:
+        return jsonify({"success": False, "error": "Not authorized"}), 403
+
+    # Check if already confirmed
+    existing = TradeConfirmation.query.filter_by(
+        trade_id=trade_id,
+        user_id=current_user.id
+    ).first()
+
+    if existing:
+        return jsonify({"success": False, "error": "Already confirmed"}), 400
+
+    try:
+        # Create confirmation
+        confirmation = TradeConfirmation(trade_id=trade_id, user_id=current_user.id)
+        db.session.add(confirmation)
+        db.session.flush()
+
+        # Check if both users have confirmed
+        if trade.is_fully_confirmed():
+            trade.complete_trade()
+            both_confirmed = True
+        else:
+            db.session.commit()
+            both_confirmed = False
+
+        return jsonify({
+            "success": True,
+            "both_confirmed": both_confirmed,
+            "message": "Trade confirmed!" if both_confirmed else "Waiting for other user to confirm."
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to confirm trade: {e}")
+        return jsonify({"success": False, "error": "Failed to confirm trade"}), 500
+

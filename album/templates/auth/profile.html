@@ -77,12 +77,18 @@
               <span class="detail-value">{{ current_user.created_at.strftime('%B %d, %Y') }}</span>
             </div>
 
-            {% if current_user.last_login %}
             <div class="detail-item">
-              <span class="detail-label">Last Login:</span>
-              <span class="detail-value">{{ current_user.last_login.strftime('%B %d, %Y at %I:%M %p') }}</span>
+              <span class="detail-label">Stars:</span>
+              <span class="detail-value">
+                {% if current_user.star_count > 0 %}
+                  ⭐ {{ current_user.star_count }}
+                  <span class="stars-hint">({{ current_user.star_count }} completed trade{{ 's' if current_user.star_count != 1 else '' }})</span>
+                {% else %}
+                  No stars yet
+                  <span class="stars-hint">(Complete trades to earn stars!)</span>
+                {% endif %}
+              </span>
             </div>
-            {% endif %}
           </div>
         </div>
 
@@ -518,6 +524,20 @@ document.addEventListener('keydown', function(e) {
   .profile-stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* Stars Display */
+.stars-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-left: 0.5rem;
+  font-weight: 400;
+}
+
+.detail-value {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 </style>
 {% endblock %}

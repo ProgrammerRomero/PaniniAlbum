@@ -29,6 +29,11 @@
   const userToggle = userDropdown?.querySelector(".dropdown-toggle");
   const userMenu = userDropdown?.querySelector(".dropdown-menu");
 
+  // Export dropdown elements
+  const exportDropdown = document.getElementById("exportDropdown");
+  const exportToggle = exportDropdown?.querySelector(".dropdown-toggle");
+  const exportMenu = exportDropdown?.querySelector(".dropdown-menu");
+
   // Check if user is logged in by looking for user dropdown in navbar
   // If logged in, we use the database API; otherwise, localStorage
   const isLoggedIn = !!userDropdown;
@@ -330,6 +335,40 @@
   }
 
   // ===========================================================================
+  // EXPORT DROPDOWN
+  // ===========================================================================
+
+  function closeExportDropdown() {
+    if (exportDropdown) {
+      exportDropdown.classList.remove("open");
+    }
+  }
+
+  function initExportDropdown() {
+    if (!exportDropdown || !exportToggle || !exportMenu) return;
+
+    // Toggle dropdown on button click
+    exportToggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      exportDropdown.classList.toggle("open");
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", (event) => {
+      if (!exportDropdown.contains(event.target)) {
+        closeExportDropdown();
+      }
+    });
+
+    // Close dropdown when clicking any item
+    exportMenu.querySelectorAll(".dropdown-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        closeExportDropdown();
+      });
+    });
+  }
+
+  // ===========================================================================
   // EXCEL EXPORTS
   // ===========================================================================
 
@@ -627,6 +666,9 @@
 
     // Initialize teams dropdown (if present)
     initDropdown();
+
+    // Initialize export dropdown (if present)
+    initExportDropdown();
 
     // Album-specific initialization (only on album page)
     if (!track || pages.length === 0) {

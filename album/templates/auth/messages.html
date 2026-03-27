@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - Panini Album{% endblock %}
+
+{% block content %}
+<section class="auth-section messages-section">
+  <div class="messages-container">
+
+    <!-- Header -->
+    <header class="messages-header">
+      <h1 class="messages-title">💬 Messages</h1>
+      <p class="messages-subtitle">
+        Chat with other collectors and manage your trades
+      </p>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Conversations List -->
+    {% if conversations %}
+      <div class="conversations-list">
+        {% for conv in conversations %}
+        <a href="{{ url_for('auth.messages_conversation', username=conv.user.username) }}" class="conversation-card">
+
+          <!-- User Avatar -->
+          <div class="conversation-avatar">
+            {% if conv.user.photo_url %}
+              <img src="{{ conv.user.photo_url }}" alt="{{ conv.user.username }}">
+            {% else %}
+              <div class="avatar-placeholder">{{ conv.user.username[0]|upper }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Conversation Info -->
+          <div class="conversation-info">
+            <div class="conversation-header-row">
+              <h3 class="conversation-username">
+                {{ conv.user.username }}
+                {% if conv.user.star_count > 0 %}
+                  <span class="star-badge" title="{{ conv.user.star_count }} completed trades">
+                    ⭐ {{ conv.user.star_count }}
+                  </span>
+                {% endif %}
+              </h3>
+              <span class="conversation-time">{{ conv.last_message.created_at.strftime('%b %d, %I:%M %p') }}</span>
+            </div>
+
+            <p class="conversation-preview {{ 'unread' if conv.unread_count > 0 else '' }}">
+              {% if conv.last_message.sender_id == current_user.id %}
+                <span class="you-prefix">You:</span>
+              {% endif %}
+              {{ conv.last_message.content[:80] }}{% if conv.last_message.content|length > 80 %}...{% endif %}
+            </p>
+
+            {% if conv.unread_count > 0 %}
+              <span class="unread-badge">{{ conv.unread_count }} new</span>
+            {% endif %}
+          </div>
+
+          <!-- Arrow -->
+          <div class="conversation-arrow">›</div>
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-messages">
+        <div class="empty-icon">💬</div>
+        <h2>No Messages Yet</h2>
+        <p>Go to <a href="{{ url_for('auth.users') }}">Other Users</a> to start trading with collectors!</p>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<style>
+/* Messages Section */
+.messages-section {
+  padding: 1rem;
+  min-height: calc(100vh - 100px);
+}
+
+.messages-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Header */
+.messages-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.messages-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.messages-subtitle {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Conversations List */
+.conversations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Conversation Card */
+.conversation-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.conversation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-color: var(--color-accent);
+}
+
+/* Avatar */
+.conversation-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--color-accent);
+}
+
+.conversation-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Conversation Info */
+.conversation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.conversation-username {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.star-badge {
+  font-size: 0.75rem;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #1f2937;
+  padding: 0.15rem 0.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+}
+
+.conversation-time {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.conversation-preview {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-preview.unread {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.you-prefix {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.unread-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 50px;
+  margin-top: 0.5rem;
+}
+
+/* Arrow */
+.conversation-arrow {
+  font-size: 1.5rem;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.conversation-card:hover .conversation-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+/* Empty State */
+.empty-messages {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-messages h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+}
+
+.empty-messages p {
+  color: var(--color-text-muted);
+}
+
+.empty-messages a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.empty-messages a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .conversation-card {
+    padding: 0.875rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .conversation-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .avatar-placeholder {
+    font-size: 1.25rem;
+  }
+
+  .conversation-username {
+    font-size: 1rem;
+  }
+
+  .conversation-time {
+    font-size: 0.75rem;
+  }
+
+  .conversation-preview {
+    font-size: 0.85rem;
+  }
+}
+</style>
+{% endblock %}

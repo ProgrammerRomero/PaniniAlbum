@@ -19,10 +19,13 @@ git branch -a	    Ver todas
 git switch	        Cambiar de rama
 git branch -vv      Vista mas Completa
 
+git commit --amend -m "Update the text"  Update the Latest commit MESSAGE
+
 git log                             ver commit history -> this shows COmmits IDs
 git log --online
 git log --oneline --graph --all     Shows branches and commits visually:
-git log --oneline -5                
+git log --oneline -5
+git log -1 origin/main..HEAD        Shows the lates commint that has not been pushed                
 
 git diff            ver cambios exactos
 git diff --cached   ver cambios exactos listos para commit
