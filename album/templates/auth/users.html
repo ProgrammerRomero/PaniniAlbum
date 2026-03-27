@@ -99,7 +99,12 @@
           <div class="trading-section">
 
             <!-- What you can receive -->
-            <div class="trade-block {{ 'has-items' if data.can_receive_count > 0 else '' }}">
+            <div class="trade-block {{ 'has-items' if data.can_receive_count > 0 else '' }} {{ 'clickable' if data.can_receive_count > 0 else '' }}"
+                 data-trade-type="receive"
+                 data-username="{{ data.user.username }}"
+                 data-stickers='{{ data.can_receive | tojson }}'
+                 data-count="{{ data.can_receive_count }}"
+                 onclick="event.stopPropagation(); openTradeModal(this)">
               <div class="trade-header">
                 <span class="trade-icon">📥</span>
                 <span class="trade-title">You Can Get</span>
@@ -112,7 +117,7 @@
                     <span class="sticker-tag">{{ sticker_id }}</span>
                   {% endfor %}
                   {% if data.can_receive_count > 5 %}
-                    <span class="more-tag">+{{ data.can_receive_count - 5 }} more</span>
+                    <span class="more-tag">+{{ data.can_receive_count - 5 }} more →</span>
                   {% endif %}
                 </div>
               {% else %}
@@ -121,7 +126,12 @@
             </div>
 
             <!-- What you can give -->
-            <div class="trade-block {{ 'has-items' if data.can_give_count > 0 else '' }}">
+            <div class="trade-block {{ 'has-items' if data.can_give_count > 0 else '' }} {{ 'clickable' if data.can_give_count > 0 else '' }}"
+                 data-trade-type="give"
+                 data-username="{{ data.user.username }}"
+                 data-stickers='{{ data.can_give | tojson }}'
+                 data-count="{{ data.can_give_count }}"
+                 onclick="event.stopPropagation(); openTradeModal(this)">
               <div class="trade-header">
                 <span class="trade-icon">📤</span>
                 <span class="trade-title">You Can Give</span>
@@ -134,7 +144,7 @@
                     <span class="sticker-tag give">{{ sticker_id }}</span>
                   {% endfor %}
                   {% if data.can_give_count > 5 %}
-                    <span class="more-tag">+{{ data.can_give_count - 5 }} more</span>
+                    <span class="more-tag">+{{ data.can_give_count - 5 }} more →</span>
                   {% endif %}
                 </div>
               {% else %}
@@ -173,6 +183,33 @@
     <button class="modal-close-btn">&times;</button>
     <div id="modalCardContainer">
       <!-- Card content will be cloned here -->
+    </div>
+  </div>
+</div>
+
+<!-- Trade Stickers Modal -->
+<div id="tradeModal" class="trade-modal">
+  <div class="trade-modal-backdrop" onclick="closeTradeModal()"></div>
+  <div class="trade-modal-content">
+    <button class="trade-modal-close" onclick="closeTradeModal()">&times;</button>
+
+    <div class="trade-modal-header">
+      <div class="trade-modal-icon" id="tradeModalIcon">📥</div>
+      <h2 class="trade-modal-title" id="tradeModalTitle">You Can Get</h2>
+      <p class="trade-modal-subtitle" id="tradeModalSubtitle">
+        Stickers available from <strong>username</strong>
+      </p>
+    </div>
+
+    <div class="trade-modal-body">
+      <div class="trade-count-badge" id="tradeModalCount">0 stickers</div>
+      <div class="sticker-grid" id="tradeModalGrid">
+        <!-- Sticker cards will be populated here -->
+      </div>
+    </div>
+
+    <div class="trade-modal-footer">
+      <button class="btn btn-secondary" onclick="closeTradeModal()">Close</button>
     </div>
   </div>
 </div>
@@ -241,6 +278,74 @@
     });
   }
 })();
+
+// Trade Modal Functions
+function openTradeModal(element) {
+  const tradeType = element.dataset.tradeType;
+  const username = element.dataset.username;
+  const stickers = JSON.parse(element.dataset.stickers);
+  const count = parseInt(element.dataset.count);
+
+  const modal = document.getElementById('tradeModal');
+  const icon = document.getElementById('tradeModalIcon');
+  const title = document.getElementById('tradeModalTitle');
+  const subtitle = document.getElementById('tradeModalSubtitle');
+  const countBadge = document.getElementById('tradeModalCount');
+  const grid = document.getElementById('tradeModalGrid');
+
+  // Set header content based on trade type
+  if (tradeType === 'receive') {
+    icon.textContent = '📥';
+    title.textContent = 'You Can Get';
+    subtitle.innerHTML = `Stickers available from <strong>${escapeHtml(username)}</strong>`;
+    countBadge.className = 'trade-count-badge receive';
+    grid.className = 'sticker-grid receive';
+  } else {
+    icon.textContent = '📤';
+    title.textContent = 'You Can Give';
+    subtitle.innerHTML = `Stickers you can trade to <strong>${escapeHtml(username)}</strong>`;
+    countBadge.className = 'trade-count-badge give';
+    grid.className = 'sticker-grid give';
+  }
+
+  // Set count badge
+  countBadge.textContent = `${count} sticker${count !== 1 ? 's' : ''}`;
+
+  // Populate sticker grid
+  grid.innerHTML = stickers.map(stickerId => `
+    <div class="sticker-card ${tradeType}">
+      <span class="sticker-card-id">${escapeHtml(stickerId)}</span>
+      <span class="sticker-card-action">${tradeType === 'receive' ? 'Receive' : 'Give'}</span>
+    </div>
+  `).join('');
+
+  // Show modal
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeTradeModal() {
+  const modal = document.getElementById('tradeModal');
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// Close trade modal on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const tradeModal = document.getElementById('tradeModal');
+    if (tradeModal.classList.contains('active')) {
+      closeTradeModal();
+    }
+  }
+});
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 </script>
 
 <style>
@@ -771,6 +876,275 @@
   .user-card-modal-content {
     width: 95%;
     max-width: none;
+  }
+}
+
+/* Trade Modal Styles */
+.trade-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+
+.trade-modal.active {
+  display: flex;
+}
+
+.trade-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+}
+
+.trade-modal-content {
+  position: relative;
+  z-index: 2001;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 24px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+  animation: tradeModalSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tradeModalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.trade-modal-close {
+  position: absolute;
+  top: -45px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2.2rem;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 2002;
+  line-height: 1;
+}
+
+.trade-modal-close:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Trade Modal Header */
+.trade-modal-header {
+  padding: 2rem 2rem 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+}
+
+.trade-modal-icon {
+  font-size: 3.5rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.trade-modal-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: #fff;
+}
+
+.trade-modal-subtitle {
+  font-size: 1rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.trade-modal-subtitle strong {
+  color: #38bdf8;
+}
+
+/* Trade Modal Body */
+.trade-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+}
+
+.trade-count-badge {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  width: 100%;
+}
+
+.trade-count-badge.receive {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.trade-count-badge.give {
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  color: #fb923c;
+}
+
+/* Sticker Grid */
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.sticker-card {
+  background: rgba(15, 23, 42, 0.8);
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+
+.sticker-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.sticker-card.receive {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%);
+}
+
+.sticker-card.receive:hover {
+  border-color: rgba(34, 197, 94, 0.7);
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.2);
+}
+
+.sticker-card.give {
+  border-color: rgba(249, 115, 22, 0.4);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%);
+}
+
+.sticker-card.give:hover {
+  border-color: rgba(249, 115, 22, 0.7);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.2);
+}
+
+.sticker-card-id {
+  display: block;
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.sticker-card-action {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sticker-card.receive .sticker-card-action {
+  color: #4ade80;
+}
+
+.sticker-card.give .sticker-card-action {
+  color: #fb923c;
+}
+
+/* Trade Modal Footer */
+.trade-modal-footer {
+  padding: 1.25rem 2rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  text-align: center;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 0 0 24px 24px;
+}
+
+/* Clickable trade blocks */
+.trade-block.clickable {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.trade-block.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.trade-block.clickable[data-trade-type="receive"]:hover {
+  border-color: rgba(34, 197, 94, 0.6);
+}
+
+.trade-block.clickable[data-trade-type="give"]:hover {
+  border-color: rgba(249, 115, 22, 0.6);
+}
+
+.trade-block.clickable .more-tag {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .trade-modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .trade-modal-header {
+    padding: 1.5rem 1.25rem 1rem;
+  }
+
+  .trade-modal-title {
+    font-size: 1.4rem;
+  }
+
+  .trade-modal-body {
+    padding: 1rem 1.25rem;
+  }
+
+  .sticker-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .sticker-card {
+    padding: 1rem;
+  }
+
+  .sticker-card-id {
+    font-size: 1.1rem;
   }
 }
 </style>
