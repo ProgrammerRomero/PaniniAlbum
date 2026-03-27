@@ -32,6 +32,14 @@ def migrate_database():
     else:
         print("[OK] star_count column already exists")
 
+    # Check if photo_url column exists in users table
+    if 'photo_url' not in columns:
+        print("Adding photo_url column to users table...")
+        cursor.execute("ALTER TABLE users ADD COLUMN photo_url VARCHAR(255)")
+        print("[OK] photo_url column added")
+    else:
+        print("[OK] photo_url column already exists")
+
     # Check if messages table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='messages'")
     if not cursor.fetchone():

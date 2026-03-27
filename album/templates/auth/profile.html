@@ -37,7 +37,7 @@
             {% endif %}
           </div>
           <!-- Photo Upload Form -->
-          <form method="POST" action="{{ url_for('auth.upload_photo') }}" enctype="multipart/form-data" class="photo-upload-form">
+          <form method="POST" action="{{ url_for('auth.upload_photo') }}" enctype="multipart/form-data" class="photo-upload-form" id="photoUploadForm">
             <label for="photoUpload" class="btn btn-secondary btn-sm photo-upload-btn">
               📷 Upload Photo
             </label>
@@ -47,8 +47,11 @@
               name="photo"
               accept="image/*"
               class="photo-input"
-              onchange="this.form.submit()"
             >
+            <!-- Hidden inputs for crop data -->
+            <input type="hidden" name="crop_x" id="cropX">
+            <input type="hidden" name="crop_y" id="cropY">
+            <input type="hidden" name="crop_scale" id="cropScale">
           </form>
           <p class="photo-hint">Max 2MB, JPG/PNG</p>
         </div>
@@ -148,6 +151,34 @@
   </div>
 </section>
 
+<!-- Photo Crop Modal -->
+<div id="cropModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content crop-modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">📷 Adjust Photo</h3>
+      <p class="modal-subtitle">Drag to move • Use slider to zoom</p>
+    </div>
+    <div class="modal-body crop-modal-body">
+      <div class="crop-container">
+        <div class="crop-frame" id="cropFrame">
+          <div class="crop-circle-overlay"></div>
+          <div class="crop-image-bg" id="cropImageBg"></div>
+        </div>
+      </div>
+      <div class="zoom-controls">
+        <button type="button" class="zoom-btn" id="zoomOutBtn">−</button>
+        <input type="range" id="zoomSlider" min="50" max="500" value="100" class="zoom-slider">
+        <button type="button" class="zoom-btn" id="zoomInBtn">+</button>
+      </div>
+      <div class="zoom-hint" id="zoomHint">Zoom: 100%</div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeCropModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="applyCrop()">✓ Apply Photo</button>
+    </div>
+  </div>
+</div>
+
 <!-- Delete Account Confirmation Modal -->
 <div id="deleteModal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
@@ -172,6 +203,245 @@
 </div>
 
 <script>
+// Simple Photo Cropping State
+let cropState = {
+  x: 50,        // background-position-x (0-100%)
+  y: 50,        // background-position-y (0-100%)
+  zoom: 100,    // background-size percentage
+  isDragging: false,
+  startX: 0,
+  startY: 0,
+  imgDataUrl: null
+};
+
+const cropModal = document.getElementById('cropModal');
+const cropFrame = document.getElementById('cropFrame');
+const cropImageBg = document.getElementById('cropImageBg');
+const zoomSlider = document.getElementById('zoomSlider');
+const zoomInBtn = document.getElementById('zoomInBtn');
+const zoomOutBtn = document.getElementById('zoomOutBtn');
+const zoomHint = document.getElementById('zoomHint');
+const photoUpload = document.getElementById('photoUpload');
+const photoUploadForm = document.getElementById('photoUploadForm');
+const cropX = document.getElementById('cropX');
+const cropY = document.getElementById('cropY');
+const cropScale = document.getElementById('cropScale');
+
+// Handle file selection
+photoUpload.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Validate file size (2MB)
+  if (file.size > 2 * 1024 * 1024) {
+    alert('File too large. Maximum size is 2MB.');
+    return;
+  }
+
+  // Read and display image
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    cropState.imgDataUrl = event.target.result;
+    initCrop();
+    showCropModal();
+  };
+  reader.readAsDataURL(file);
+});
+
+// Initialize crop state
+function initCrop() {
+  // Reset to center, fit to frame
+  cropState.x = 50;
+  cropState.y = 50;
+  cropState.zoom = 100;
+
+  // Set background image
+  cropImageBg.style.backgroundImage = `url(${cropState.imgDataUrl})`;
+
+  // Reset slider
+  zoomSlider.value = 100;
+  updateZoomHint();
+  updateBackground();
+}
+
+// Show crop modal
+function showCropModal() {
+  cropModal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+// Close crop modal
+function closeCropModal() {
+  cropModal.style.display = 'none';
+  document.body.style.overflow = 'auto';
+  photoUpload.value = '';
+  cropState.imgDataUrl = null;
+}
+
+// Update background position and size
+function updateBackground() {
+  cropImageBg.style.backgroundPosition = `${cropState.x}% ${cropState.y}%`;
+  cropImageBg.style.backgroundSize = `${cropState.zoom}%`;
+}
+
+// Update zoom hint text
+function updateZoomHint() {
+  zoomHint.textContent = `Zoom: ${cropState.zoom}%`;
+}
+
+// Zoom slider handler
+zoomSlider.addEventListener('input', function() {
+  cropState.zoom = parseInt(this.value);
+  updateZoomHint();
+  updateBackground();
+});
+
+// Zoom in/out buttons
+zoomInBtn.addEventListener('click', function() {
+  cropState.zoom = Math.min(500, cropState.zoom + 25);
+  zoomSlider.value = cropState.zoom;
+  updateZoomHint();
+  updateBackground();
+});
+
+zoomOutBtn.addEventListener('click', function() {
+  cropState.zoom = Math.max(50, cropState.zoom - 25);
+  zoomSlider.value = cropState.zoom;
+  updateZoomHint();
+  updateBackground();
+});
+
+// Drag handlers - update background position
+cropFrame.addEventListener('mousedown', function(e) {
+  cropState.isDragging = true;
+  cropState.startX = e.clientX;
+  cropState.startY = e.clientY;
+  cropFrame.style.cursor = 'grabbing';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', function(e) {
+  if (!cropState.isDragging) return;
+
+  // Calculate movement as percentage of frame size
+  const deltaX = (e.clientX - cropState.startX) / 3; // Sensitivity factor
+  const deltaY = (e.clientY - cropState.startY) / 3;
+
+  cropState.x = Math.max(0, Math.min(100, cropState.x - deltaX * 0.5));
+  cropState.y = Math.max(0, Math.min(100, cropState.y - deltaY * 0.5));
+
+  cropState.startX = e.clientX;
+  cropState.startY = e.clientY;
+
+  updateBackground();
+});
+
+document.addEventListener('mouseup', function() {
+  cropState.isDragging = false;
+  cropFrame.style.cursor = 'grab';
+});
+
+// Touch handlers for mobile
+cropFrame.addEventListener('touchstart', function(e) {
+  cropState.isDragging = true;
+  const touch = e.touches[0];
+  cropState.startX = touch.clientX;
+  cropState.startY = touch.clientY;
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchmove', function(e) {
+  if (!cropState.isDragging) return;
+
+  const touch = e.touches[0];
+  const deltaX = (touch.clientX - cropState.startX) / 3;
+  const deltaY = (touch.clientY - cropState.startY) / 3;
+
+  cropState.x = Math.max(0, Math.min(100, cropState.x - deltaX * 0.5));
+  cropState.y = Math.max(0, Math.min(100, cropState.y - deltaY * 0.5));
+
+  cropState.startX = touch.clientX;
+  cropState.startY = touch.clientY;
+
+  updateBackground();
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchend', function() {
+  cropState.isDragging = false;
+});
+
+// Apply crop and submit form
+function applyCrop() {
+  console.log('Applying crop:', { x: cropState.x, y: cropState.y, zoom: cropState.zoom });
+  // Send percentage values (0-100 for position, zoom percentage)
+  cropX.value = cropState.x;
+  cropY.value = cropState.y;
+  cropScale.value = cropState.zoom;
+
+  // Create a hidden file input with the cropped image data
+  // First, draw the visible portion to a canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = 300;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+
+  const img = new Image();
+  img.onload = function() {
+    // Calculate which part of the image is visible
+    // Based on CSS background-position and background-size
+    const imgWidth = img.width;
+    const imgHeight = img.height;
+
+    // background-size as ratio (e.g., 100% = 1.0, 200% = 2.0)
+    const sizeRatio = cropState.zoom / 100;
+
+    // The displayed size of the image
+    const displayWidth = 300 * sizeRatio;
+    const displayHeight = 300 * sizeRatio * (imgHeight / imgWidth);
+
+    // Calculate offset based on position percentage
+    // At 50%, the image is centered (negative offset of half the overflow)
+    // At 0%, the left edge aligns
+    // At 100%, the right edge aligns
+    const overflowX = displayWidth - 300;
+    const overflowY = displayHeight - 300;
+
+    const offsetX = -(cropState.x / 100) * overflowX;
+    const offsetY = -(cropState.y / 100) * overflowY;
+
+    // Draw the visible portion
+    ctx.drawImage(img, offsetX, offsetY, displayWidth, displayHeight);
+
+    // Convert to blob and create a new file input
+    canvas.toBlob(function(blob) {
+      const file = new File([blob], 'cropped_photo.jpg', { type: 'image/jpeg' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      photoUpload.files = dataTransfer.files;
+
+      // Now submit the form with the cropped image
+      photoUploadForm.submit();
+    }, 'image/jpeg', 0.95);
+  };
+  img.src = cropState.imgDataUrl;
+}
+
+// Close modal when clicking outside
+cropModal.addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeCropModal();
+  }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && cropModal.style.display === 'flex') {
+    closeCropModal();
+  }
+});
+
+// Delete Modal Functions
 function showDeleteModal() {
   document.getElementById('deleteModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
@@ -182,14 +452,14 @@ function hideDeleteModal() {
   document.body.style.overflow = 'auto';
 }
 
-// Close modal when clicking outside
+// Close delete modal when clicking outside
 document.getElementById('deleteModal').addEventListener('click', function(e) {
   if (e.target === this) {
     hideDeleteModal();
   }
 });
 
-// Close modal with Escape key
+// Close delete modal with Escape key
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     hideDeleteModal();
@@ -276,6 +546,146 @@ document.addEventListener('keydown', function(e) {
   color: var(--color-text-muted);
   text-align: center;
   margin: 0;
+}
+
+/* Crop Modal Specific Styles */
+.crop-modal-content {
+  max-width: 400px;
+}
+
+.crop-modal-body {
+  padding: 1.5rem;
+}
+
+.modal-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0.25rem 0 0 0;
+}
+
+.crop-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.crop-frame {
+  width: 280px;
+  height: 280px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #0f172a;
+  box-shadow: 0 0 0 3px #38bdf8, inset 0 0 30px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+}
+
+.crop-frame:active {
+  cursor: grabbing;
+}
+
+.crop-circle-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.crop-image-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  background-size: 100%;
+  will-change: background-position, background-size;
+}
+
+/* Zoom Controls */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.zoom-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.zoom-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  transform: scale(1.05);
+}
+
+.zoom-btn:active {
+  transform: scale(0.95);
+}
+
+.zoom-slider {
+  flex: 1;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+  transition: transform 0.15s;
+}
+
+.zoom-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.zoom-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+}
+
+.zoom-hint {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-top: 0.75rem;
 }
 
 /* Details Section */
@@ -481,7 +891,6 @@ document.addEventListener('keydown', function(e) {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #ef4444;
 }
 
 .modal-body {
@@ -523,6 +932,11 @@ document.addEventListener('keydown', function(e) {
 
   .profile-stats-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .crop-frame {
+    width: 250px;
+    height: 250px;
   }
 }
 

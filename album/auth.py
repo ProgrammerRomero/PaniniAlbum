@@ -338,11 +338,15 @@ def profile():
 @login_required
 def upload_photo():
     """
-    Handle profile photo upload.
+    Handle profile photo upload with cropping.
 
-    For now, this is a placeholder that stores a message.
-    Full implementation would save the file to a storage service.
+    Processes the uploaded image with PIL/Pillow to apply cropping
+    based on user adjustments (drag position and zoom scale).
+    Outputs a square 300x300px cropped image centered in a circle.
     """
+    from PIL import Image
+    import io
+
     if "photo" not in request.files:
         flash("No photo selected.", "error")
         return redirect(url_for("auth.profile"))
@@ -361,12 +365,147 @@ def upload_photo():
         flash("Invalid file type. Please use JPG, PNG, or GIF.", "error")
         return redirect(url_for("auth.profile"))
 
-    # For now, just show a success message
-    # In production, you would:
-    # 1. Resize/compress the image
-    # 2. Save to file system or cloud storage (AWS S3, Cloudinary, etc.)
-    # 3. Store the URL in the user record
-    flash("Photo upload feature coming soon! 🎉", "info")
+    # Get crop parameters from form
+    crop_x = float(request.form.get("crop_x", 0))
+    crop_y = float(request.form.get("crop_y", 0))
+    crop_scale = float(request.form.get("crop_scale", 1))
+
+    # Validate file size (max 2MB)
+    photo.seek(0, 2)  # Seek to end of file
+    file_size = photo.tell()
+    photo.seek(0)  # Reset to beginning
+
+    if file_size > 2 * 1024 * 1024:  # 2MB
+        flash("File too large. Maximum size is 2MB.", "error")
+        return redirect(url_for("auth.profile"))
+
+    try:
+        # Create uploads directory if it doesn't exist
+        import os
+
+        uploads_dir = os.path.join(current_app.root_path, "static", "uploads", "photos")
+        os.makedirs(uploads_dir, exist_ok=True)
+
+        # Open image with PIL
+        image = Image.open(photo)
+
+        # Convert to RGB if necessary (for PNG with transparency)
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+
+        # Image dimensions
+        img_width, img_height = image.size
+
+        # The crop parameters from frontend are percentages:
+        # crop_x: 0-100 (background-position-x: 0 = left, 50 = center, 100 = right)
+        # crop_y: 0-100 (background-position-y: 0 = top, 50 = center, 100 = bottom)
+        # crop_scale: zoom percentage (50-500, where 100 = image fits frame)
+
+        # Frame output size
+        frame_size = 300
+
+        # The frontend uses CSS background-size and background-position
+        # background-size: Z% means the image is Z% of the container size
+        # At 100%: image fills container exactly
+        # At 200%: image is 2x container size (zoomed in 2x)
+        # At 50%: image is 0.5x container size (zoomed out)
+
+        # For the crop calculation:
+        # At zoom 100%, we want to capture an area that when resized to 300px,
+        # it fills the frame. For a square image, that's 300x300.
+        # At zoom 200%, we want 2x zoom, so capture 150x150 and resize to 300.
+
+        # Clamp zoom to minimum 100% (can't zoom out beyond fitting)
+        zoom_pct = max(100, crop_scale)
+        zoom_factor = zoom_pct / 100
+
+        # Calculate how many pixels from the original image to capture
+        # At 100% zoom: capture 300px (full frame size)
+        # At 200% zoom: capture 150px (half frame size = 2x zoom)
+        crop_pixels = int(frame_size / zoom_factor)
+
+        # Convert percentage position to actual coordinates
+        # CSS background-position works by aligning a point in the image
+        # with a point in the container based on percentage
+        # At 50%, the centers align
+        # At 0%, the left/top edges align
+        # At 100%, the right/bottom edges align
+
+        # For cropping, we calculate the position of the crop box center
+        # When background-position is 50%, crop is centered
+        # When 0%, crop's left edge is at image's left edge
+        # When 100%, crop's right edge is at image's right edge
+
+        center_x = int((crop_x / 100) * img_width)
+        center_y = int((crop_y / 100) * img_height)
+
+        # Calculate crop box
+        half_crop = crop_pixels // 2
+
+        left = center_x - half_crop
+        top = center_y - half_crop
+        right = left + crop_pixels
+        bottom = top + crop_pixels
+
+        # Clamp to image bounds (this will shift the crop if near edges)
+        if left < 0:
+            left = 0
+            right = min(crop_pixels, img_width)
+        if top < 0:
+            top = 0
+            bottom = min(crop_pixels, img_height)
+        if right > img_width:
+            right = img_width
+            left = max(0, right - crop_pixels)
+        if bottom > img_height:
+            bottom = img_height
+            top = max(0, bottom - crop_pixels)
+
+        # Ensure crop box is valid
+        if right > img_width:
+            right = img_width
+            left = max(0, right - crop_size)
+        if bottom > img_height:
+            bottom = img_height
+            top = max(0, bottom - crop_size)
+
+        # Crop the image
+        cropped_image = image.crop((left, top, right, bottom))
+
+        # Resize to output size (300x300)
+        if cropped_image.size != (frame_size, frame_size):
+            cropped_image = cropped_image.resize((frame_size, frame_size), Image.Resampling.LANCZOS)
+
+        # Generate unique filename: user_id_timestamp.jpg (always save as JPEG)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"user_{current_user.id}_{timestamp}.jpg"
+        filepath = os.path.join(uploads_dir, filename)
+
+        # Save the cropped image with quality optimization
+        cropped_image.save(filepath, "JPEG", quality=90, optimize=True)
+
+        # Delete old photo if exists (optional cleanup)
+        if current_user.photo_url:
+            old_filename = current_user.photo_url.split("/")[-1]
+            old_filepath = os.path.join(uploads_dir, old_filename)
+            if os.path.exists(old_filepath):
+                try:
+                    os.remove(old_filepath)
+                except OSError:
+                    pass  # Ignore errors deleting old file
+
+        # Update user's photo_url in database
+        photo_url = f"/static/uploads/photos/{filename}"
+        current_user.photo_url = photo_url
+        db.session.commit()
+
+        flash("Profile photo updated successfully! 🎉", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Photo upload error: {e}")
+        flash("Failed to upload photo. Please try again.", "error")
+
     return redirect(url_for("auth.profile"))
 
 

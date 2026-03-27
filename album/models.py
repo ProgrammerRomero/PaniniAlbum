@@ -46,6 +46,9 @@ class User(UserMixin, db.Model):
     # Reliability stars for trade completion
     star_count = db.Column(db.Integer, default=0)
 
+    # Profile photo URL
+    photo_url = db.Column(db.String(255), nullable=True)
+
     # Relationships for messages
     sent_messages = db.relationship(
         "Message",
