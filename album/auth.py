@@ -28,7 +28,7 @@ from flask_login import (
 )
 from flask_mail import Message, Mail
 
-from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation
+from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation, COUNTRIES
 from .utils import validate_email
 
 # Create blueprint
@@ -297,15 +297,64 @@ def reset_password():
 # PROFILE
 # =============================================================================
 
-@auth_bp.route("/profile")
+@auth_bp.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
     """
     User profile page.
 
     Displays user information and collection stats.
+    Allows updating profile details including country.
     """
     from .config import ALBUM_PAGES
+
+    # Handle profile update
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip()
+        country = request.form.get("country", "").strip()
+
+        errors = []
+
+        # Validate username
+        if not username:
+            errors.append("Username is required.")
+        elif len(username) < 3:
+            errors.append("Username must be at least 3 characters.")
+        elif username != current_user.username:
+            # Check if username is already taken
+            existing = User.query.filter_by(username=username).first()
+            if existing:
+                errors.append("Username is already taken.")
+
+        # Validate email
+        if not email:
+            errors.append("Email is required.")
+        elif "@" not in email or "." not in email:
+            errors.append("Please enter a valid email address.")
+        elif email != current_user.email:
+            # Check if email is already taken
+            existing = User.query.filter_by(email=email).first()
+            if existing:
+                errors.append("Email is already registered.")
+
+        # Validate country
+        valid_countries = [c[0] for c in COUNTRIES if c[0]]
+        if country and country not in valid_countries:
+            errors.append("Invalid country selected.")
+
+        if errors:
+            for error in errors:
+                flash(error, "error")
+        else:
+            # Update user details
+            current_user.username = username
+            current_user.email = email
+            current_user.country = country if country else None
+            db.session.commit()
+            flash("Profile updated successfully!", "success")
+
+        return redirect(url_for("auth.profile"))
 
     # Count owned stickers
     owned_count = current_user.stickers.filter_by(is_owned=True).count()
@@ -331,7 +380,7 @@ def profile():
         "total": total_stickers,
     }
 
-    return render_template("auth/profile.html", stats=stats)
+    return render_template("auth/profile.html", stats=stats, countries=COUNTRIES)
 
 
 @auth_bp.route("/profile/upload-photo", methods=["POST"])

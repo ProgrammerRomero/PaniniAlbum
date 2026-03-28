@@ -296,7 +296,7 @@
   // ===========================================================================
 
   function closeDropdown() {
-    if (teamsDropdown) {
+    if (teamsDropdown && teamsDropdown.classList.contains("open")) {
       teamsDropdown.classList.remove("open");
     }
   }
@@ -306,17 +306,33 @@
 
     dropdownToggle.addEventListener("click", (event) => {
       event.stopPropagation();
+      // Close all other dropdowns first
+      closeUserDropdown();
+      closeExportDropdown();
       teamsDropdown.classList.toggle("open");
     });
 
     dropdownMenu.addEventListener("click", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (!target.classList.contains("dropdown-item")) return;
+      const target = event.target.closest(".dropdown-item");
+      if (!target) return;
+
+      // Prevent any default behavior
+      event.preventDefault();
+      event.stopPropagation();
 
       const pageId = target.getAttribute("data-target-page-id");
+      console.log("Team clicked:", pageId, "pages.length:", pages.length);
+
       if (pageId) {
-        goToPageId(pageId);
+        if (pages.length > 0) {
+          // On album page, navigate directly
+          console.log("Navigating directly to:", pageId);
+          goToPageId(pageId);
+        } else {
+          // Not on album page, redirect via query parameter
+          console.log("Redirecting to /?team=" + pageId);
+          window.location.href = "/?team=" + pageId;
+        }
       }
       closeDropdown();
     });
@@ -333,7 +349,7 @@
   // ===========================================================================
 
   function closeUserDropdown() {
-    if (userDropdown) {
+    if (userDropdown && userDropdown.classList.contains("open")) {
       userDropdown.classList.remove("open");
     }
   }
@@ -344,6 +360,9 @@
     // Toggle dropdown on button click
     userToggle.addEventListener("click", (event) => {
       event.stopPropagation();
+      // Close all other dropdowns first
+      closeDropdown();
+      closeExportDropdown();
       userDropdown.classList.toggle("open");
     });
 
@@ -360,7 +379,7 @@
   // ===========================================================================
 
   function closeExportDropdown() {
-    if (exportDropdown) {
+    if (exportDropdown && exportDropdown.classList.contains("open")) {
       exportDropdown.classList.remove("open");
     }
   }
@@ -371,6 +390,9 @@
     // Toggle dropdown on button click
     exportToggle.addEventListener("click", (event) => {
       event.stopPropagation();
+      // Close all other dropdowns first
+      closeDropdown();
+      closeUserDropdown();
       exportDropdown.classList.toggle("open");
     });
 
@@ -664,6 +686,55 @@
   // TEAM COMPLETION TOGGLE
   // ===========================================================================
 
+  // Custom confirmation modal state
+  let teamConfirmCallback = null;
+  let teamConfirmToggle = null;
+  let teamConfirmStickerIds = null;
+
+  function showTeamConfirmModal(teamCode, isCompleting, callback) {
+    const modal = document.getElementById("teamConfirmModal");
+    const message = document.getElementById("teamConfirmMessage");
+    const confirmBtn = modal.querySelector(".team-confirm-confirm");
+
+    // Set message based on action
+    if (isCompleting) {
+      message.innerHTML = `Mark all stickers for <strong>${teamCode}</strong> as completed?`;
+      confirmBtn.textContent = "Mark Complete";
+      confirmBtn.classList.remove("team-confirm-danger");
+    } else {
+      message.innerHTML = `Remove all stickers for <strong>${teamCode}</strong>?`;
+      confirmBtn.textContent = "Remove All";
+      confirmBtn.classList.add("team-confirm-danger");
+    }
+
+    // Store callback
+    teamConfirmCallback = callback;
+
+    // Show modal
+    modal.style.display = "flex";
+  }
+
+  function hideTeamConfirmModal() {
+    const modal = document.getElementById("teamConfirmModal");
+    modal.style.display = "none";
+    teamConfirmCallback = null;
+  }
+
+  // Global functions for onclick handlers
+  window.confirmTeamToggle = function() {
+    if (teamConfirmCallback) {
+      teamConfirmCallback(true);
+    }
+    hideTeamConfirmModal();
+  };
+
+  window.cancelTeamToggle = function() {
+    if (teamConfirmCallback) {
+      teamConfirmCallback(false);
+    }
+    hideTeamConfirmModal();
+  };
+
   async function handleTeamToggleChange(event) {
     const toggle = event.target;
 
@@ -673,62 +744,50 @@
     if (!teamCode) return;
 
     const stickerIdsJson = toggle.getAttribute("data-sticker-ids");
-    console.log("Raw sticker IDs:", stickerIdsJson);
-    if (!stickerIdsJson) {
-      console.warn("No sticker IDs found for team:", teamCode);
-      return;
-    }
+    if (!stickerIdsJson) return;
 
     let stickerIds;
     try {
       stickerIds = JSON.parse(stickerIdsJson);
-      console.log("Parsed sticker IDs:", stickerIds.length, "stickers");
     } catch (e) {
-      console.error("Failed to parse sticker IDs:", stickerIdsJson, e);
+      console.error("Failed to parse sticker IDs:", e);
       return;
     }
 
     const isChecked = toggle.checked;
 
-    if (isChecked) {
-      // Trying to complete all - show confirmation
-      const confirmed = confirm(`Mark all stickers for ${teamCode} as completed?`);
+    // Show custom confirmation modal
+    showTeamConfirmModal(teamCode, isChecked, async (confirmed) => {
       if (!confirmed) {
         // User cancelled - revert toggle
-        toggle.checked = false;
+        toggle.checked = !isChecked;
         return;
       }
 
-      // Mark all stickers as owned
-      for (const stickerId of stickerIds) {
-        ownedIds.add(stickerId);
-        await saveOwnership(stickerId, true);
-      }
-    } else {
-      // Trying to uncomplete all - show confirmation
-      const confirmed = confirm(`Remove all stickers for ${teamCode}?`);
-      if (!confirmed) {
-        // User cancelled - revert toggle
-        toggle.checked = true;
-        return;
-      }
-
-      // Remove all stickers from owned
-      for (const stickerId of stickerIds) {
-        ownedIds.delete(stickerId);
-        // Clear duplicates when unmarking
-        if (duplicatesData[stickerId]) {
-          delete duplicatesData[stickerId];
-          await saveDuplicate(stickerId, 0);
+      if (isChecked) {
+        // Mark all stickers as owned
+        for (const stickerId of stickerIds) {
+          ownedIds.add(stickerId);
+          await saveOwnership(stickerId, true);
         }
-        await saveOwnership(stickerId, false);
+      } else {
+        // Remove all stickers from owned
+        for (const stickerId of stickerIds) {
+          ownedIds.delete(stickerId);
+          // Clear duplicates when unmarking
+          if (duplicatesData[stickerId]) {
+            delete duplicatesData[stickerId];
+            await saveDuplicate(stickerId, 0);
+          }
+          await saveOwnership(stickerId, false);
+        }
       }
-    }
 
-    // Sync UI
-    syncCheckboxesFromState();
-    syncDuplicatesFromState();
-    updateTeamCompletionStatus(teamCode, stickerIds);
+      // Sync UI
+      syncCheckboxesFromState();
+      syncDuplicatesFromState();
+      updateTeamCompletionStatus(teamCode, stickerIds);
+    });
   }
 
   function updateTeamCompletionStatus(teamCode, stickerIds) {
@@ -868,19 +927,60 @@
     // Initialize export dropdown (if present)
     initExportDropdown();
 
+    // Stats modal event listeners (works on all pages)
+    if (statsBtn) {
+      statsBtn.addEventListener("click", openStatsModal);
+    }
+    if (statsModalClose) {
+      statsModalClose.addEventListener("click", closeStatsModal);
+    }
+    if (statsModalOverlay) {
+      statsModalOverlay.addEventListener("click", closeStatsModal);
+    }
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && statsModal && statsModal.style.display === "block") {
+        closeStatsModal();
+      }
+    });
+
     // Album-specific initialization (only on album page)
     if (!track || pages.length === 0) {
       // We're on a page without the album (e.g., profile page)
-      // User dropdown is already initialized above
       return;
     }
 
     // Load user data first (from database or localStorage)
     await loadUserData();
 
+    // Check for initial team from redirect BEFORE setting page position
+    const initialTeamEl = document.getElementById("initialTeamData");
+    let targetPageId = null;
+    if (initialTeamEl) {
+      try {
+        targetPageId = JSON.parse(initialTeamEl.textContent);
+        console.log("Initial team from redirect:", targetPageId);
+      } catch (e) {
+        console.error("Failed to parse initial team:", e);
+      }
+    }
+
     // Sync UI with loaded data
     syncCheckboxesFromState();
     syncDuplicatesFromState();
+
+    // If we have an initial team, go there; otherwise start at cover
+    if (targetPageId) {
+      const targetIndex = pages.findIndex((p) => p.dataset.pageId === targetPageId);
+      if (targetIndex >= 0) {
+        currentPageIndex = targetIndex;
+        console.log("Navigating directly to team page:", targetPageId, "index:", targetIndex);
+      } else {
+        console.warn("Team page not found:", targetPageId);
+      }
+      // Clean up the URL
+      history.replaceState(null, null, window.location.pathname);
+    }
+
     updatePagePosition();
 
     // Event listeners
@@ -901,22 +1001,6 @@
     if (exportBtn) {
       exportBtn.addEventListener("click", exportMissing);
     }
-
-    // Stats modal event listeners
-    if (statsBtn) {
-      statsBtn.addEventListener("click", openStatsModal);
-    }
-    if (statsModalClose) {
-      statsModalClose.addEventListener("click", closeStatsModal);
-    }
-    if (statsModalOverlay) {
-      statsModalOverlay.addEventListener("click", closeStatsModal);
-    }
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && statsModal && statsModal.style.display === "block") {
-        closeStatsModal();
-      }
-    });
 
     // Duplicate tracking event listeners
     document.addEventListener("click", handleDuplicateClick);

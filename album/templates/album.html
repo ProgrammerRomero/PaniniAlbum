@@ -21,10 +21,13 @@
             <div class="album-page-header-main">
               <h2 class="album-page-title">{{ page.title }}</h2>
 
+              {% if page.team_code %}
               <div>
                 <img src="{{ url_for('static', filename='images/' + page.title|lower|replace(' ', '_') + '.jpg') }}" alt="{{ page.title }}"
-                  class="team-flag">
+                  class="team-flag"
+                  onerror="this.style.display='none'">
               </div>
+              {% endif %}
 
               <p class="album-page-subtitle">
                 {{ page.section }}
@@ -207,4 +210,164 @@
 <script id="albumStructureData" type="application/json">
     {{ album_pages | tojson }}
   </script>
+
+  {% if initial_team %}
+  <script id="initialTeamData" type="application/json">"{{ initial_team }}"</script>
+  {% endif %}
+
+  <!-- Team Toggle Confirmation Modal -->
+  <div id="teamConfirmModal" class="team-confirm-modal" style="display: none;">
+    <div class="team-confirm-overlay" onclick="cancelTeamToggle()"></div>
+    <div class="team-confirm-content">
+      <div class="team-confirm-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4l3 3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3 class="team-confirm-title">Confirm Action</h3>
+      <p class="team-confirm-message" id="teamConfirmMessage">Are you sure?</p>
+      <div class="team-confirm-buttons">
+        <button type="button" class="team-confirm-btn team-confirm-cancel" onclick="cancelTeamToggle()">Cancel</button>
+        <button type="button" class="team-confirm-btn team-confirm-confirm" onclick="confirmTeamToggle()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+  /* Team Toggle Confirmation Modal */
+  .team-confirm-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .team-confirm-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .team-confirm-content {
+    position: relative;
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(56, 189, 248, 0.1);
+    animation: teamConfirmSlideIn 0.3s ease-out;
+  }
+
+  @keyframes teamConfirmSlideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9) translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .team-confirm-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 10px 30px rgba(56, 189, 248, 0.3);
+  }
+
+  .team-confirm-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .team-confirm-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin: 0 0 0.75rem;
+  }
+
+  .team-confirm-message {
+    font-size: 1rem;
+    color: #94a3b8;
+    margin: 0 0 2rem;
+    line-height: 1.5;
+  }
+
+  .team-confirm-message strong {
+    color: #38bdf8;
+  }
+
+  .team-confirm-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .team-confirm-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
+  }
+
+  .team-confirm-cancel {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
+
+  .team-confirm-cancel:hover {
+    background: rgba(148, 163, 184, 0.25);
+    color: #e2e8f0;
+    transform: translateY(-2px);
+  }
+
+  .team-confirm-confirm {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+  }
+
+  .team-confirm-confirm:hover {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+  }
+
+  .team-confirm-confirm.team-confirm-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  }
+
+  .team-confirm-confirm.team-confirm-danger:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  }
+  </style>
 {% endblock %}

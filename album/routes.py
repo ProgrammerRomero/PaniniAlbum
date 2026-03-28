@@ -21,10 +21,13 @@ def index():
     handled on the client side using a small amount of JavaScript.
     """
     teams_index = team_pages_by_code()
+    # Check if user wants to go directly to a specific team
+    initial_team = request.args.get("team", None)
     return render_template(
         "album.html",
         album_pages=ALBUM_PAGES,
         team_pages=teams_index,
+        initial_team=initial_team,
     )
 
 
