@@ -21,7 +21,7 @@
             <h2 class="album-page-title">{{ page.title }}</h2>
 
             <div>
-              <img src="{{ url_for('static', filename='images/' + page.title|lower + '.jpg') }}" alt="{{ page.title }}"
+              <img src="{{ url_for('static', filename='images/' + page.title|lower|replace(' ', '_') + '.jpg') }}" alt="{{ page.title }}"
                 class="team-flag">
             </div>
 
@@ -58,17 +58,15 @@
                   =========================
                   Allows users to track duplicate stickers:
                   - minus-btn: Decrease duplicate count (min 0)
-                  - duplicate-count: Display current duplicate count
+                  - duplicate-count-input: Editable input for duplicate count
                   - plus-btn: Increase duplicate count
 
                   Only visible when sticker is marked as owned.
-                  Shows a badge when duplicates exist (> 0).
                 -->
                 <div class="duplicate-counter" data-sticker-id="{{ sticker.id }}">
                   <button type="button" class="duplicate-btn minus-btn" data-sticker-id="{{ sticker.id }}" aria-label="Decrease duplicates">−</button>
-                  <span class="duplicate-count" data-sticker-id="{{ sticker.id }}">0</span>
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" class="duplicate-count-input" data-sticker-id="{{ sticker.id }}" value="0" min="0" max="999" title="Click to edit or use +/-">
                   <button type="button" class="duplicate-btn plus-btn" data-sticker-id="{{ sticker.id }}" aria-label="Increase duplicates">+</button>
-                  <span class="duplicate-badge" data-sticker-id="{{ sticker.id }}" style="display: none;">♻️</span>
                 </div>
               </div>
             </label>
@@ -116,28 +114,26 @@
     It is shown when the user clicks the "Stats" button in the navbar.
 
     The modal contains two main sections:
-    1. Overall Stats: Shows total completion percentage and count
-    2. Team Progress: Shows progress bars for each team
+    1. Overall Stats: Shows total completion percentage and count (STICKY HEADER)
+    2. Team Progress: Shows progress bars for each team (SCROLLABLE)
 
-    JavaScript populates this modal dynamically based on:
-    - The album structure data embedded from the server (albumStructureData)
-    - The user's owned stickers stored in localStorage
+    The modal is centered on the page and the header stays visible while
+    scrolling through the team list.
   -->
 <div id="statsModal" class="modal" style="display: none;">
   <!-- Modal overlay: clicking this closes the modal -->
   <div class="modal-overlay" id="statsModalOverlay"></div>
 
   <!-- Modal content container -->
-  <div class="modal-content">
-    <!-- Modal header with title and close button -->
-    <div class="modal-header">
+  <div class="modal-content stats-modal-content">
+    <!-- Modal header with title and close button (STICKY) -->
+    <div class="modal-header stats-modal-header">
       <h2 class="modal-title">📊 Collection Statistics</h2>
       <button class="modal-close" id="statsModalClose" type="button" aria-label="Close modal">×</button>
     </div>
 
-    <!-- Modal body containing the statistics -->
-    <div class="modal-body">
-
+    <!-- Sticky summary section with overall stats -->
+    <div class="stats-modal-summary">
       <!--
           OVERALL STATS SECTION
           Shows big-picture metrics:
@@ -155,25 +151,16 @@
         </div>
       </div>
 
-      <!--
-          TEAM PROGRESS SECTION
-          Shows a list of all teams with progress bars.
-          Each item displays:
-          - Team name
-          - Progress bar (filled based on % complete)
-          - Owned / Total count
-
-          JavaScript populates this container dynamically.
-        -->
-      <div class="stats-section team-stats">
-        <h3 class="stats-section-title">Progress by Team</h3>
-        <div id="statsTeamList" class="stats-team-list">
-          <!-- Team progress bars will be inserted here by JavaScript -->
-        </div>
-      </div>
-
+      <!-- Section title for team progress -->
+      <h3 class="stats-section-title">Progress by Team</h3>
     </div>
-    <!-- End modal body -->
+
+    <!-- Scrollable team list section -->
+    <div class="stats-modal-scrollable">
+      <div id="statsTeamList" class="stats-team-list">
+        <!-- Team progress bars will be inserted here by JavaScript -->
+      </div>
+    </div>
 
   </div>
   <!-- End modal content -->

@@ -544,20 +544,18 @@
   }
 
   function updateDuplicateDisplay(stickerId) {
-    const countEl = document.querySelector(`.duplicate-count[data-sticker-id="${stickerId}"]`);
-    const badgeEl = document.querySelector(`.duplicate-badge[data-sticker-id="${stickerId}"]`);
+    const inputEl = document.querySelector(`.duplicate-count-input[data-sticker-id="${stickerId}"]`);
     const minusBtn = document.querySelector(`.minus-btn[data-sticker-id="${stickerId}"]`);
 
     const count = getDuplicateCount(stickerId);
 
-    if (countEl) countEl.textContent = count;
-    if (badgeEl) badgeEl.style.display = count > 0 ? "inline" : "none";
+    if (inputEl) inputEl.value = count;
     if (minusBtn) minusBtn.disabled = count === 0;
   }
 
   function syncDuplicatesFromState() {
-    const countElements = document.querySelectorAll(".duplicate-count");
-    countElements.forEach((el) => {
+    const inputElements = document.querySelectorAll(".duplicate-count-input");
+    inputElements.forEach((el) => {
       const stickerId = el.getAttribute("data-sticker-id");
       if (stickerId) {
         updateDuplicateDisplay(stickerId);
@@ -590,6 +588,54 @@
 
     if (newCount !== currentCount) {
       await setDuplicateCount(stickerId, newCount);
+    }
+  }
+
+  async function handleDuplicateInput(event) {
+    const input = event.target;
+    if (!input.classList.contains("duplicate-count-input")) return;
+
+    const stickerId = input.getAttribute("data-sticker-id");
+    if (!stickerId) return;
+
+    if (!ownedIds.has(stickerId)) {
+      input.value = 0;
+      return;
+    }
+
+    // Handle Enter key
+    if (event.key === "Enter") {
+      input.blur();
+      return;
+    }
+
+    // Only allow numbers
+    const value = input.value.replace(/[^0-9]/g, "");
+    if (value !== input.value) {
+      input.value = value;
+    }
+  }
+
+  async function handleDuplicateInputBlur(event) {
+    const input = event.target;
+    if (!input.classList.contains("duplicate-count-input")) return;
+
+    const stickerId = input.getAttribute("data-sticker-id");
+    if (!stickerId) return;
+
+    if (!ownedIds.has(stickerId)) {
+      input.value = 0;
+      return;
+    }
+
+    const newCount = parseInt(input.value, 10) || 0;
+    const currentCount = getDuplicateCount(stickerId);
+
+    if (newCount !== currentCount) {
+      await setDuplicateCount(stickerId, newCount);
+    } else {
+      // Ensure display is correct even if no change
+      input.value = currentCount;
     }
   }
 
@@ -717,6 +763,9 @@
 
     // Duplicate tracking event listeners
     document.addEventListener("click", handleDuplicateClick);
+    document.addEventListener("input", handleDuplicateInput);
+    document.addEventListener("blur", handleDuplicateInputBlur, true);
+    document.addEventListener("keydown", handleDuplicateInput);
     if (exportDuplicatesBtn) {
       exportDuplicatesBtn.addEventListener("click", exportDuplicates);
     }
