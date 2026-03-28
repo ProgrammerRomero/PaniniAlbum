@@ -306,6 +306,16 @@ a:hover {
 
 .album-page-header {
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.album-page-header-main {
+  display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
@@ -322,6 +332,132 @@ a:hover {
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.12em;
+}
+
+/* Team Completion Section */
+.team-completion-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+/* Toggle Switch */
+.team-toggle-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.team-toggle {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.team-toggle-slider {
+  display: flex;
+  align-items: center;
+  width: 44px;
+  height: 22px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.3s ease;
+  border: 2px solid rgba(148, 163, 184, 0.3);
+}
+
+.team-toggle-slider::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.team-toggle-on,
+.team-toggle-off {
+  position: absolute;
+  font-size: 0.65rem;
+  font-weight: 700;
+  transition: opacity 0.3s ease;
+}
+
+.team-toggle-on {
+  left: 8px;
+  color: #fff;
+  opacity: 0;
+}
+
+.team-toggle-off {
+  right: 8px;
+  color: rgba(148, 163, 184, 0.8);
+  opacity: 1;
+}
+
+/* Toggle ON State */
+.team-toggle:checked + .team-toggle-slider {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.team-toggle:checked + .team-toggle-slider::before {
+  transform: translateX(22px);
+}
+
+.team-toggle:checked + .team-toggle-slider .team-toggle-on {
+  opacity: 1;
+}
+
+.team-toggle:checked + .team-toggle-slider .team-toggle-off {
+  opacity: 0;
+}
+
+/* COMPLETED Tag */
+.team-completed-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4ade80;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  animation: completedPop 0.4s ease;
+}
+
+.team-completed-tag::before {
+  content: '✓';
+  font-size: 0.8rem;
+}
+
+@keyframes completedPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .page-intro {

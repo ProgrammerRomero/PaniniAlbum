@@ -17,20 +17,35 @@
       <div class="album-track" id="albumTrack">
         {% for page in album_pages %}
         <article class="album-page" data-page-id="{{ page.id }}" data-page-index="{{ loop.index0 }}">
-          <header class="album-page-header">
-            <h2 class="album-page-title">{{ page.title }}</h2>
+          <header class="album-page-header" data-team-code="{{ page.team_code }}">
+            <div class="album-page-header-main">
+              <h2 class="album-page-title">{{ page.title }}</h2>
 
-            <div>
-              <img src="{{ url_for('static', filename='images/' + page.title|lower|replace(' ', '_') + '.jpg') }}" alt="{{ page.title }}"
-                class="team-flag">
+              <div>
+                <img src="{{ url_for('static', filename='images/' + page.title|lower|replace(' ', '_') + '.jpg') }}" alt="{{ page.title }}"
+                  class="team-flag">
+              </div>
+
+              <p class="album-page-subtitle">
+                {{ page.section }}
+                {% if page.team_code %}
+                · {{ page.team_code }}
+                {% endif %}
+              </p>
             </div>
 
-            <p class="album-page-subtitle">
-              {{ page.section }}
-              {% if page.team_code %}
-              · {{ page.team_code }}
-              {% endif %}
-            </p>
+            {% if page.team_code %}
+            <div class="team-completion-section">
+              <label class="team-toggle-wrapper" title="Toggle all stickers for this team">
+                <input type="checkbox" class="team-toggle" data-team-code="{{ page.team_code }}" data-sticker-ids='{{ page.stickers | map(attribute="id") | list | tojson | safe }}'>
+                <span class="team-toggle-slider">
+                  <span class="team-toggle-on">✓</span>
+                  <span class="team-toggle-off">○</span>
+                </span>
+              </label>
+              <span class="team-completed-tag" data-team-code="{{ page.team_code }}" style="display: none;">COMPLETED</span>
+            </div>
+            {% endif %}
           </header>
 
           {% if page.stickers %}

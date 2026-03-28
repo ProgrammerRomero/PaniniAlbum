@@ -232,6 +232,27 @@
     }
 
     await saveOwnership(id, cb.checked);
+
+    // Update team completion status
+    const card = cb.closest(".sticker-card");
+    if (card) {
+      const page = card.closest(".album-page");
+      if (page) {
+        const toggle = page.querySelector(".team-toggle[data-team-code]");
+        if (toggle) {
+          const teamCode = toggle.getAttribute("data-team-code");
+          const stickerIdsJson = toggle.getAttribute("data-sticker-ids");
+          if (teamCode && stickerIdsJson) {
+            try {
+              const stickerIds = JSON.parse(stickerIdsJson);
+              updateTeamCompletionStatus(teamCode, stickerIds);
+            } catch (e) {
+              console.error("Failed to update team completion:", e);
+            }
+          }
+        }
+      }
+    }
   }
 
   // ===========================================================================
@@ -639,6 +660,137 @@
     }
   }
 
+  // ===========================================================================
+  // TEAM COMPLETION TOGGLE
+  // ===========================================================================
+
+  async function handleTeamToggleChange(event) {
+    const toggle = event.target;
+
+    if (!toggle.classList.contains("team-toggle")) return;
+
+    const teamCode = toggle.getAttribute("data-team-code");
+    if (!teamCode) return;
+
+    const stickerIdsJson = toggle.getAttribute("data-sticker-ids");
+    console.log("Raw sticker IDs:", stickerIdsJson);
+    if (!stickerIdsJson) {
+      console.warn("No sticker IDs found for team:", teamCode);
+      return;
+    }
+
+    let stickerIds;
+    try {
+      stickerIds = JSON.parse(stickerIdsJson);
+      console.log("Parsed sticker IDs:", stickerIds.length, "stickers");
+    } catch (e) {
+      console.error("Failed to parse sticker IDs:", stickerIdsJson, e);
+      return;
+    }
+
+    const isChecked = toggle.checked;
+
+    if (isChecked) {
+      // Trying to complete all - show confirmation
+      const confirmed = confirm(`Mark all stickers for ${teamCode} as completed?`);
+      if (!confirmed) {
+        // User cancelled - revert toggle
+        toggle.checked = false;
+        return;
+      }
+
+      // Mark all stickers as owned
+      for (const stickerId of stickerIds) {
+        ownedIds.add(stickerId);
+        await saveOwnership(stickerId, true);
+      }
+    } else {
+      // Trying to uncomplete all - show confirmation
+      const confirmed = confirm(`Remove all stickers for ${teamCode}?`);
+      if (!confirmed) {
+        // User cancelled - revert toggle
+        toggle.checked = true;
+        return;
+      }
+
+      // Remove all stickers from owned
+      for (const stickerId of stickerIds) {
+        ownedIds.delete(stickerId);
+        // Clear duplicates when unmarking
+        if (duplicatesData[stickerId]) {
+          delete duplicatesData[stickerId];
+          await saveDuplicate(stickerId, 0);
+        }
+        await saveOwnership(stickerId, false);
+      }
+    }
+
+    // Sync UI
+    syncCheckboxesFromState();
+    syncDuplicatesFromState();
+    updateTeamCompletionStatus(teamCode, stickerIds);
+  }
+
+  function updateTeamCompletionStatus(teamCode, stickerIds) {
+    const tag = document.querySelector(`.team-completed-tag[data-team-code="${teamCode}"]`);
+    const toggle = document.querySelector(`.team-toggle[data-team-code="${teamCode}"]`);
+    if (!tag || !toggle) return;
+
+    const allOwned = stickerIds.every(id => ownedIds.has(id));
+    const anyOwned = stickerIds.some(id => ownedIds.has(id));
+
+    // Update toggle state
+    toggle.checked = allOwned;
+
+    // Show/hide completed tag
+    if (allOwned) {
+      tag.style.display = "inline-flex";
+    } else {
+      tag.style.display = "none";
+    }
+  }
+
+  function updateAllTeamCompletionStatus() {
+    const toggles = document.querySelectorAll(".team-toggle[data-team-code]");
+    toggles.forEach(toggle => {
+      const teamCode = toggle.getAttribute("data-team-code");
+      const stickerIdsJson = toggle.getAttribute("data-sticker-ids");
+      if (!teamCode || !stickerIdsJson) return;
+
+      try {
+        const stickerIds = JSON.parse(stickerIdsJson);
+        updateTeamCompletionStatus(teamCode, stickerIds);
+      } catch (e) {
+        console.error("Failed to parse sticker IDs:", e);
+      }
+    });
+  }
+
+  // ===========================================================================
+  // CLICK HANDLER FOR TEAM TOGGLE (backup for label clicks)
+  // ===========================================================================
+
+  async function handleTeamToggleClick(event) {
+    // Handle clicks on the toggle wrapper/slider as well
+    const target = event.target;
+    const wrapper = target.closest(".team-toggle-wrapper");
+    if (!wrapper) return;
+
+    const toggle = wrapper.querySelector(".team-toggle");
+    if (!toggle) return;
+
+    // If the click was directly on the toggle, let the change handler handle it
+    if (target === toggle) return;
+
+    // Otherwise, toggle the checkbox manually
+    event.preventDefault();
+    toggle.checked = !toggle.checked;
+
+    // Manually trigger the change event
+    const changeEvent = new Event("change", { bubbles: true });
+    toggle.dispatchEvent(changeEvent);
+  }
+
   async function exportDuplicates() {
     const duplicatesList = [];
     for (const [stickerId, count] of Object.entries(duplicatesData)) {
@@ -733,6 +885,11 @@
 
     // Event listeners
     document.addEventListener("change", handleCheckboxChange);
+    document.addEventListener("change", handleTeamToggleChange);
+    document.addEventListener("click", handleTeamToggleClick);
+
+    // Check team completion status on page load
+    updateAllTeamCompletionStatus();
 
     if (leftArrow) {
       leftArrow.addEventListener("click", () => goToPageIndex(currentPageIndex - 1));
