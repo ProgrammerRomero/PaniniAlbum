@@ -8,7 +8,13 @@
 
     <!-- Header -->
     <header class="users-header">
-      <h1 class="users-title">👥 Other Collectors</h1>
+      <div class="header-top">
+        <h1 class="users-title">👥 Other Collectors</h1>
+        <div class="search-container">
+          <input type="text" id="userSearch" class="search-input" placeholder="Search by name or sticker (e.g., bra-17)..." autocomplete="off">
+          <button class="search-btn" onclick="clearSearch()" title="Clear search">✕</button>
+        </div>
+      </div>
       <p class="users-subtitle">
         Find trading partners! Users are sorted by compatibility -
         those with the most matches for your collection appear first.
@@ -23,6 +29,15 @@
         </span>
       </div>
     </header>
+
+    <!-- No Results Message -->
+    <div id="noResults" class="no-results" style="display: none;">
+      <div class="empty-state">
+        <span class="empty-icon">🔍</span>
+        <h2>No Results Found</h2>
+        <p>No traders match your search. Try a different name or sticker number.</p>
+      </div>
+    </div>
 
     <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -167,13 +182,6 @@
             </div>
           </div>
 
-          <!-- Contact Button -->
-          <div class="user-actions">
-            <a href="mailto:{{ data.user.email }}?subject=Panini%20Album%20Trade%20Offer"
-               class="btn btn-primary btn-block contact-btn">
-              📧 Contact for Trade
-            </a>
-          </div>
         </div>
         {% endfor %}
       </div>
@@ -295,12 +303,101 @@
 
 <script>
 (function() {
+  // User data for search filtering - manually build serializable structure
+  // Searches by: trader name OR stickers in "You Can Get" (trader's duplicates = can_receive)
+  const usersData = [
+    {% for data in users_data %}
+    {
+      username: {{ data.user.username | tojson }},
+      canReceive: {{ data.can_receive | tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
   // Card click to expand functionality
   const cards = document.querySelectorAll('.user-card');
+  const cardsArray = Array.from(cards);
   const modal = document.getElementById('userCardModal');
   const modalBackdrop = modal.querySelector('.user-card-modal-backdrop');
   const modalCloseBtn = modal.querySelector('.modal-close-btn');
   const modalContainer = document.getElementById('modalCardContainer');
+  const searchInput = document.getElementById('userSearch');
+  const noResults = document.getElementById('noResults');
+  const clearBtn = document.querySelector('.search-btn');
+
+  // Search functionality
+  function filterUsers() {
+    const query = searchInput.value.trim().toLowerCase();
+    let visibleCount = 0;
+
+    if (!query) {
+      // Show all cards when search is empty
+      cards.forEach(card => card.style.display = '');
+      noResults.style.display = 'none';
+      clearBtn.classList.add('hidden');
+      return;
+    }
+
+    clearBtn.classList.remove('hidden');
+
+    console.log('Searching for:', query);
+    console.log('Total users:', usersData.length);
+
+    usersData.forEach((data, index) => {
+      const card = cardsArray[index];
+      if (!card) {
+        console.log('No card for index', index);
+        return;
+      }
+
+      // Get username and convert to lowercase
+      const username = (data.username || '').toLowerCase();
+      // Get trader's duplicate stickers (what YOU can get from them)
+      const canReceive = data.canReceive || [];
+      const canReceiveLower = canReceive.map(s => s.toLowerCase());
+
+      // Match by username (partial match)
+      const usernameMatch = username.includes(query);
+
+      // Match by stickers in "You Can Get" (trader's duplicates)
+      const stickerMatch = canReceiveLower.some(sticker => sticker.includes(query));
+
+      if (usernameMatch || stickerMatch) {
+        card.style.display = '';
+        visibleCount++;
+        console.log('MATCH:', data.username, '| Username match:', usernameMatch, '| Sticker match:', stickerMatch);
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    console.log('Visible count:', visibleCount);
+
+    // Show "no results" if nothing matches
+    noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+  }
+
+  // Debounced search
+  let searchTimeout;
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(filterUsers, 150);
+  });
+
+  // Clear search
+  window.clearSearch = function() {
+    searchInput.value = '';
+    filterUsers();
+    searchInput.focus();
+  };
+
+  // Handle Enter key to search immediately
+  searchInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      clearTimeout(searchTimeout);
+      filterUsers();
+    }
+  });
 
   function openModal(card) {
     // Clone the card content
@@ -664,6 +761,128 @@ function escapeHtml(text) {
   padding: 0.35rem 0.75rem;
   font-size: 0.8rem;
   color: var(--color-text);
+}
+
+/* Header Layout with Search */
+.header-top {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding: 0 0.5rem;
+  position: relative;
+}
+
+.users-title {
+  margin: 0;
+  text-align: center;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.search-input {
+  width: 280px;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  color: var(--color-text);
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.search-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.search-btn:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--color-text);
+}
+
+.search-btn.hidden {
+  display: none;
+}
+
+/* No Results Message */
+.no-results {
+  text-align: center;
+  padding: 3rem 2rem;
+  margin-top: 1rem;
+}
+
+.no-results .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.no-results .empty-icon {
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.no-results h2 {
+  font-size: 1.25rem;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.no-results p {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Responsive for search */
+@media (max-width: 640px) {
+  .header-top {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 2.5rem;
+  }
+
+  .search-container {
+    position: static;
+    transform: none;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .search-input {
+    width: 220px;
+  }
 }
 
 .stat-badge strong {
