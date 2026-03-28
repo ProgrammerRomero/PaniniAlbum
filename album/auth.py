@@ -28,7 +28,7 @@ from flask_login import (
 )
 from flask_mail import Message, Mail
 
-from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation, COUNTRIES
+from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation, COUNTRIES, COUNTRY_CODES
 from .utils import validate_email
 
 # Create blueprint
@@ -380,7 +380,7 @@ def profile():
         "total": total_stickers,
     }
 
-    return render_template("auth/profile.html", stats=stats, countries=COUNTRIES)
+    return render_template("auth/profile.html", stats=stats, countries=COUNTRIES, country_codes=COUNTRY_CODES)
 
 
 @auth_bp.route("/profile/upload-photo", methods=["POST"])
@@ -679,6 +679,7 @@ def users():
         users_data=user_data,
         current_missing_count=len(current_missing),
         current_duplicates_count=len(current_duplicates),
+        country_codes=COUNTRY_CODES,
     )
 
 

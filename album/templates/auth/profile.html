@@ -63,7 +63,7 @@
 
         <!-- Account Information -->
         <div class="profile-card">
-          <h2 class="card-title">📋 Account Information</h2>
+          <h2 class="card-title">Account Information</h2>
 
           <form method="POST" action="{{ url_for('auth.profile') }}" class="profile-form" id="profileForm">
             <div class="detail-list">
@@ -85,12 +85,17 @@
 
               <div class="detail-item">
                 <span class="detail-label">Country:</span>
-                <div class="detail-value">
+                <div class="detail-value country-display">
                   <span class="view-mode">
-                    {% for code, name in countries %}
-                      {% if code == current_user.country %}{{ name }}{% endif %}
-                    {% endfor %}
-                    {% if not current_user.country %}Not set{% endif %}
+                    {% if current_user.country %}
+                      <span class="country-name">{{ current_user.country }}</span>
+                      <img src="https://flagcdn.com/w40/{{ country_codes.get(current_user.country, '').lower() }}.png"
+                           alt="{{ current_user.country }}"
+                           class="country-flag"
+                           onerror="this.style.display='none'">
+                    {% else %}
+                      Not set
+                    {% endif %}
                   </span>
                   <select name="country" class="edit-input country-select" style="display: none;">
                     {% for code, name in countries %}
@@ -105,15 +110,13 @@
                 <span class="detail-value">{{ current_user.created_at.strftime('%B %d, %Y') }}</span>
               </div>
 
-              <div class="detail-item">
+              <div class="detail-item stars-row">
                 <span class="detail-label">Stars:</span>
-                <span class="detail-value">
+                <span class="detail-value stars-value">
                   {% if current_user.star_count > 0 %}
-                    ⭐ {{ current_user.star_count }}
-                    <span class="stars-hint">({{ current_user.star_count }} completed trade{{ 's' if current_user.star_count != 1 else '' }})</span>
+                    <span class="stars-count">⭐ {{ current_user.star_count }}</span>
                   {% else %}
-                    No stars yet
-                    <span class="stars-hint">(Complete trades to earn stars!)</span>
+                    <span class="stars-count">No stars yet</span>
                   {% endif %}
                 </span>
               </div>
@@ -529,7 +532,18 @@ function enterEditMode() {
   originalValues.country = document.querySelector('select[name="country"]').value;
 
   // Hide view mode, show edit mode
-  document.querySelectorAll('.view-mode').forEach(el => el.style.display = 'none');
+  // For username and email: hide the view spans
+  const viewModes = document.querySelectorAll('.view-mode');
+  viewModes.forEach(el => {
+    // Don't hide if it's inside country-display (we handle that separately)
+    if (!el.closest('.country-display')) {
+      el.style.display = 'none';
+    }
+  });
+  // Hide the country display view specifically
+  const countryView = document.querySelector('.country-display .view-mode');
+  if (countryView) countryView.style.display = 'none';
+
   document.querySelectorAll('.edit-input').forEach(el => el.style.display = 'block');
 
   // Update buttons
@@ -545,7 +559,10 @@ function cancelEditMode() {
   document.querySelector('select[name="country"]').value = originalValues.country;
 
   // Show view mode, hide edit mode
-  document.querySelectorAll('.view-mode').forEach(el => el.style.display = 'block');
+  // Restore by clearing inline display (reverts to CSS default)
+  document.querySelectorAll('.view-mode').forEach(el => {
+    el.style.display = '';
+  });
   document.querySelectorAll('.edit-input').forEach(el => el.style.display = 'none');
 
   // Update buttons
@@ -1155,6 +1172,40 @@ window.addEventListener('beforeunload', function(e) {
 .country-select option {
   background: var(--color-bg-card);
   color: var(--color-text);
+}
+
+/* Country Display with Flag */
+.country-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.country-flag {
+  width: 24px;
+  height: 18px;
+  border-radius: 2px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.country-name {
+  font-weight: 500;
+}
+
+/* Stars Row - Right aligned */
+.stars-row {
+  justify-content: space-between;
+}
+
+.stars-value {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.stars-count {
+  font-weight: 500;
+  color: #fbbf24;
 }
 
 /* Modern pill-shaped buttons */

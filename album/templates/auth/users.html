@@ -66,18 +66,25 @@
             </div>
 
             <div class="user-details">
-              <h3 class="user-name">
-                {{ data.user.username }}
-                {% if data.user.star_count > 0 %}
-                  <span class="star-badge" title="{{ data.user.star_count }} completed trades">
-                    ⭐ {{ data.user.star_count }}
-                  </span>
-                {% endif %}
-              </h3>
-              <p class="user-email">{{ data.user.email }}</p>
-              <div class="user-since">
-                Member since {{ data.user.created_at.strftime('%b %Y') }}
+              <div class="user-name-row">
+                <h3 class="user-name">{{ data.user.username }}</h3>
+                <div class="user-stars">
+                  {% if data.user.star_count > 0 %}
+                    <span class="star-badge" title="{{ data.user.star_count }} completed trades">
+                      ⭐ {{ data.user.star_count }}
+                    </span>
+                  {% endif %}
+                </div>
               </div>
+              {% if data.user.country %}
+              <div class="user-country">
+                <img src="https://flagcdn.com/w20/{{ country_codes.get(data.user.country, '').lower() }}.png"
+                     alt="{{ data.user.country }}"
+                     class="user-country-flag"
+                     onerror="this.style.display='none'">
+                <span class="user-country-name">{{ data.user.country }}</span>
+              </div>
+              {% endif %}
             </div>
           </div>
 
@@ -800,6 +807,52 @@ function escapeHtml(text) {
   font-size: 0.7rem;
   color: var(--color-text-muted);
   opacity: 0.7;
+}
+
+/* User Name Row with Stars */
+.user-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.15rem;
+}
+
+.user-name-row .user-name {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-stars {
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.user-stars .star-badge {
+  font-size: 0.8rem;
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+/* User Country Display */
+.user-country {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.user-country-flag {
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  object-fit: cover;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.user-country-name {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
 
 /* Collection Stats - Larger */
