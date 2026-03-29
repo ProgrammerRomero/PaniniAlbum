@@ -35,7 +35,7 @@ def create_app() -> Flask:
 
     # Secret key for sessions and CSRF protection
     # Use environment variable in production, fallback for development
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-panini-album-change-me")
+    app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-panini-album-change-me")
 
     # Database configuration
     # Use PostgreSQL from environment variable in production, SQLite locally
