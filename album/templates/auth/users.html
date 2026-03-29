@@ -11,7 +11,8 @@
       <div class="header-top">
         <h1 class="users-title">👥 Other Collectors</h1>
         <div class="search-container">
-          <input type="text" id="userSearch" class="search-input" placeholder="Search by name or sticker (e.g., bra-17)..." autocomplete="off">
+          <input type="text" id="userSearch" class="search-input"
+            placeholder="Search by name or sticker (e.g., bra-17)..." autocomplete="off">
           <button class="search-btn" onclick="clearSearch()" title="Clear search">✕</button>
         </div>
       </div>
@@ -41,158 +42,153 @@
 
     <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-messages">
-          {% for category, message in messages %}
-            <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
+    {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% endwith %}
 
     <!-- Users Grid -->
     {% if users_data %}
-      <div class="users-grid">
-        {% for data in users_data %}
-        <div class="user-card {{ 'top-match' if data.match_score > 0 else '' }}" data-user-index="{{ loop.index0 }}">
+    <div class="users-grid">
+      {% for data in users_data %}
+      <div class="user-card {{ 'top-match' if data.match_score > 0 else '' }}" data-user-index="{{ loop.index0 }}">
 
-          <!-- Card Header with Rank -->
-          <div class="user-card-header">
-            {% if loop.index <= 3 and data.match_score > 0 %}
-              <div class="rank-badge rank-{{ loop.index }}">
-                {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
-              </div>
+        <!-- Card Header with Rank -->
+        <div class="user-card-header">
+          {% if loop.index <= 3 and data.match_score> 0 %}
+            <div class="rank-badge rank-{{ loop.index }}">
+              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
+            </div>
             {% endif %}
 
             <div class="match-score {{ 'has-matches' if data.match_score > 0 else '' }}">
               <span class="match-label">Trading Match</span>
               <span class="match-value">{{ data.match_score }}</span>
             </div>
-          </div>
-
-          <!-- User Info Section -->
-          <div class="user-info-section">
-            <div class="user-avatar">
-              {% if data.user.photo_url %}
-                <img src="{{ data.user.photo_url }}" alt="{{ data.user.username }}">
-              {% else %}
-                <div class="avatar-placeholder">{{ data.user.username[0]|upper }}</div>
-              {% endif %}
-            </div>
-
-            <div class="user-details">
-              <div class="user-name-row">
-                <h3 class="user-name">{{ data.user.username }}</h3>
-                <div class="user-stars">
-                  {% if data.user.star_count > 0 %}
-                    <span class="star-badge" title="{{ data.user.star_count }} completed trades">
-                      ⭐ {{ data.user.star_count }}
-                    </span>
-                  {% endif %}
-                </div>
-              </div>
-              {% if data.user.country %}
-              <div class="user-country">
-                <img src="https://flagcdn.com/w20/{{ country_codes.get(data.user.country, '').lower() }}.png"
-                     alt="{{ data.user.country }}"
-                     class="user-country-flag"
-                     onerror="this.style.display='none'">
-                <span class="user-country-name">{{ data.user.country }}</span>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Collection Stats -->
-          <div class="collection-stats">
-            <div class="stat-item">
-              <span class="stat-value">{{ data.owned_count }}</span>
-              <span class="stat-label">Owned</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ data.duplicate_count }}</span>
-              <span class="stat-label">For Trade</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ data.completion }}%</span>
-              <span class="stat-label">Complete</span>
-            </div>
-          </div>
-
-          <!-- Progress Bar -->
-          <div class="progress-bar-container">
-            <div class="progress-bar" style="width: {{ data.completion }}%"></div>
-          </div>
-
-          <!-- Trading Section -->
-          <div class="trading-section">
-
-            <!-- What you can receive -->
-            <div class="trade-block {{ 'has-items' if data.can_receive_count > 0 else '' }} {{ 'clickable' if data.can_receive_count > 0 else '' }}"
-                 data-trade-type="receive"
-                 data-username="{{ data.user.username }}"
-                 data-stickers='{{ data.can_receive | tojson }}'
-                 data-count="{{ data.can_receive_count }}"
-                 onclick="event.stopPropagation(); openTradeModal(this)">
-              <div class="trade-header">
-                <span class="trade-icon">📥</span>
-                <span class="trade-title">You Can Get</span>
-                <span class="trade-count">{{ data.can_receive_count }}</span>
-              </div>
-
-              {% if data.can_receive_count > 0 %}
-                <div class="sticker-tags">
-                  {% for sticker_id in data.can_receive[:5] %}
-                    <span class="sticker-tag">{{ sticker_id }}</span>
-                  {% endfor %}
-                  {% if data.can_receive_count > 5 %}
-                    <span class="more-tag">+{{ data.can_receive_count - 5 }} more →</span>
-                  {% endif %}
-                </div>
-              {% else %}
-                <p class="no-trade">No duplicates you need</p>
-              {% endif %}
-            </div>
-
-            <!-- What you can give -->
-            <div class="trade-block {{ 'has-items' if data.can_give_count > 0 else '' }} {{ 'clickable' if data.can_give_count > 0 else '' }}"
-                 data-trade-type="give"
-                 data-username="{{ data.user.username }}"
-                 data-stickers='{{ data.can_give | tojson }}'
-                 data-count="{{ data.can_give_count }}"
-                 onclick="event.stopPropagation(); openTradeModal(this)">
-              <div class="trade-header">
-                <span class="trade-icon">📤</span>
-                <span class="trade-title">You Can Give</span>
-                <span class="trade-count">{{ data.can_give_count }}</span>
-              </div>
-
-              {% if data.can_give_count > 0 %}
-                <div class="sticker-tags">
-                  {% for sticker_id in data.can_give[:5] %}
-                    <span class="sticker-tag give">{{ sticker_id }}</span>
-                  {% endfor %}
-                  {% if data.can_give_count > 5 %}
-                    <span class="more-tag">+{{ data.can_give_count - 5 }} more →</span>
-                  {% endif %}
-                </div>
-              {% else %}
-                <p class="no-trade">No matches for their needs</p>
-              {% endif %}
-            </div>
-          </div>
-
         </div>
-        {% endfor %}
+
+        <!-- User Info Section -->
+        <div class="user-info-section">
+          <div class="user-avatar">
+            {% if data.user.photo_url %}
+            <img src="{{ data.user.photo_url }}" alt="{{ data.user.username }}">
+            {% else %}
+            <div class="avatar-placeholder">{{ data.user.username[0]|upper }}</div>
+            {% endif %}
+          </div>
+
+          <div class="user-details">
+            <div class="user-name-row">
+              <h3 class="user-name">{{ data.user.username }}</h3>
+              <div class="user-stars">
+                {% if data.user.star_count > 0 %}
+                <span class="star-badge" title="{{ data.user.star_count }} completed trades">
+                  ⭐ {{ data.user.star_count }}
+                </span>
+                {% endif %}
+              </div>
+            </div>
+            {% if data.user.country %}
+            <div class="user-country">
+              <img src="https://flagcdn.com/w20/{{ country_codes.get(data.user.country, '').lower() }}.png"
+                alt="{{ data.user.country }}" class="user-country-flag" onerror="this.style.display='none'">
+              <span class="user-country-name">{{ data.user.country }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Collection Stats -->
+        <div class="collection-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ data.owned_count }}</span>
+            <span class="stat-label">Owned</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ data.duplicate_count }}</span>
+            <span class="stat-label">For Trade</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ data.completion }}%</span>
+            <span class="stat-label">Complete</span>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: {{ data.completion }}%"></div>
+        </div>
+
+        <!-- Trading Section -->
+        <div class="trading-section">
+
+          <!-- What you can receive -->
+          <div
+            class="trade-block {{ 'has-items' if data.can_receive_count > 0 else '' }} {{ 'clickable' if data.can_receive_count > 0 else '' }}"
+            data-trade-type="receive" data-username="{{ data.user.username }}"
+            data-stickers='{{ data.can_receive | tojson }}' data-count="{{ data.can_receive_count }}"
+            onclick="event.stopPropagation(); openTradeModal(this)">
+            <div class="trade-header">
+              <span class="trade-icon">📥</span>
+              <span class="trade-title">You Can Get</span>
+              <span class="trade-count">{{ data.can_receive_count }}</span>
+            </div>
+
+            {% if data.can_receive_count > 0 %}
+            <div class="sticker-tags">
+              {% for sticker_id in data.can_receive[:5] %}
+              <span class="sticker-tag">{{ sticker_id }}</span>
+              {% endfor %}
+              {% if data.can_receive_count > 5 %}
+              <span class="more-tag">+{{ data.can_receive_count - 5 }} more →</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <p class="no-trade">No duplicates you need</p>
+            {% endif %}
+          </div>
+
+          <!-- What you can give -->
+          <div
+            class="trade-block {{ 'has-items' if data.can_give_count > 0 else '' }} {{ 'clickable' if data.can_give_count > 0 else '' }}"
+            data-trade-type="give" data-username="{{ data.user.username }}" data-stickers='{{ data.can_give | tojson }}'
+            data-count="{{ data.can_give_count }}" onclick="event.stopPropagation(); openTradeModal(this)">
+            <div class="trade-header">
+              <span class="trade-icon">📤</span>
+              <span class="trade-title">You Can Give</span>
+              <span class="trade-count">{{ data.can_give_count }}</span>
+            </div>
+
+            {% if data.can_give_count > 0 %}
+            <div class="sticker-tags">
+              {% for sticker_id in data.can_give[:5] %}
+              <span class="sticker-tag give">{{ sticker_id }}</span>
+              {% endfor %}
+              {% if data.can_give_count > 5 %}
+              <span class="more-tag">+{{ data.can_give_count - 5 }} more →</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <p class="no-trade">No matches for their needs</p>
+            {% endif %}
+          </div>
+        </div>
+
       </div>
+      {% endfor %}
+    </div>
     {% else %}
-      <div class="no-users-message">
-        <div class="empty-state">
-          <span class="empty-icon">👤</span>
-          <h2>No Other Users Yet</h2>
-          <p>You're the only registered user! Invite your friends to start trading stickers.</p>
-        </div>
+    <div class="no-users-message">
+      <div class="empty-state">
+        <span class="empty-icon">👤</span>
+        <h2>No Other Users Yet</h2>
+        <p>You're the only registered user! Invite your friends to start trading stickers.</p>
       </div>
+    </div>
     {% endif %}
 
   </div>
@@ -268,12 +264,8 @@
       <!-- Message Composition -->
       <div class="compose-message-section">
         <label class="compose-label" for="tradeMessage">Your Message:</label>
-        <textarea
-          id="tradeMessage"
-          class="compose-textarea"
-          rows="5"
-          placeholder="Write your trade request message here..."
-        ></textarea>
+        <textarea id="tradeMessage" class="compose-textarea" rows="5"
+          placeholder="Write your trade request message here..."></textarea>
         <div class="compose-hint">
           💡 Tip: Be polite and mention what you can offer in exchange!
         </div>
@@ -302,16 +294,16 @@
 </div>
 
 <script>
-(function() {
-  // User data for search filtering - manually build serializable structure
-  // Searches by: trader name OR stickers in "You Can Get" (trader's duplicates = can_receive)
-  const usersData = [
-    {% for data in users_data %}
+  (function () {
+    // User data for search filtering - manually build serializable structure
+    // Searches by: trader name OR stickers in "You Can Get" (trader's duplicates = can_receive)
+    const usersData = [
+      {% for data in users_data %}
     {
-      username: {{ data.user.username | tojson }},
-      canReceive: {{ data.can_receive | tojson }}
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
+    username: { { data.user.username | tojson } },
+    canReceive: { { data.can_receive | tojson } }
+  } {% if not loop.last %}, {% endif %}
+  {% endfor %}
   ];
 
   // Card click to expand functionality
@@ -379,20 +371,20 @@
 
   // Debounced search
   let searchTimeout;
-  searchInput.addEventListener('input', function() {
+  searchInput.addEventListener('input', function () {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(filterUsers, 150);
   });
 
   // Clear search
-  window.clearSearch = function() {
+  window.clearSearch = function () {
     searchInput.value = '';
     filterUsers();
     searchInput.focus();
   };
 
   // Handle Enter key to search immediately
-  searchInput.addEventListener('keypress', function(e) {
+  searchInput.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
       clearTimeout(searchTimeout);
       filterUsers();
@@ -453,60 +445,60 @@
       });
     });
   }
-})();
+}) ();
 
-// Trade Modal State
-let currentTradeData = {
-  tradeType: null,
-  username: null,
-  email: null,
-  stickers: [],
-  selectedStickers: new Set()
-};
-
-// Trade Modal Functions
-function openTradeModal(element) {
-  const tradeType = element.dataset.tradeType;
-  const username = element.dataset.username;
-  const stickers = JSON.parse(element.dataset.stickers);
-  const count = parseInt(element.dataset.count);
-
-  // Store current trade data
-  currentTradeData = {
-    tradeType: tradeType,
-    username: username,
-    email: element.closest('.user-card')?.querySelector('.user-email')?.textContent || '',
-    stickers: stickers,
+  // Trade Modal State
+  let currentTradeData = {
+    tradeType: null,
+    username: null,
+    email: null,
+    stickers: [],
     selectedStickers: new Set()
   };
 
-  const modal = document.getElementById('tradeModal');
-  const icon = document.getElementById('tradeModalIcon');
-  const title = document.getElementById('tradeModalTitle');
-  const subtitle = document.getElementById('tradeModalSubtitle');
-  const countBadge = document.getElementById('tradeModalCount');
-  const grid = document.getElementById('tradeModalGrid');
+  // Trade Modal Functions
+  function openTradeModal(element) {
+    const tradeType = element.dataset.tradeType;
+    const username = element.dataset.username;
+    const stickers = JSON.parse(element.dataset.stickers);
+    const count = parseInt(element.dataset.count);
 
-  // Set header content based on trade type
-  if (tradeType === 'receive') {
-    icon.textContent = '📥';
-    title.textContent = 'You Can Get';
-    subtitle.innerHTML = `Click stickers to select which ones you want from <strong>${escapeHtml(username)}</strong>`;
-    countBadge.className = 'trade-count-badge receive';
-    grid.className = 'sticker-grid receive';
-  } else {
-    icon.textContent = '📤';
-    title.textContent = 'You Can Give';
-    subtitle.innerHTML = `Click stickers to select which ones you can trade to <strong>${escapeHtml(username)}</strong>`;
-    countBadge.className = 'trade-count-badge give';
-    grid.className = 'sticker-grid give';
-  }
+    // Store current trade data
+    currentTradeData = {
+      tradeType: tradeType,
+      username: username,
+      email: element.closest('.user-card')?.querySelector('.user-email')?.textContent || '',
+      stickers: stickers,
+      selectedStickers: new Set()
+    };
 
-  // Set count badge
-  countBadge.textContent = `${count} sticker${count !== 1 ? 's' : ''}`;
+    const modal = document.getElementById('tradeModal');
+    const icon = document.getElementById('tradeModalIcon');
+    const title = document.getElementById('tradeModalTitle');
+    const subtitle = document.getElementById('tradeModalSubtitle');
+    const countBadge = document.getElementById('tradeModalCount');
+    const grid = document.getElementById('tradeModalGrid');
 
-  // Populate sticker grid with clickable cards
-  grid.innerHTML = stickers.map((stickerId, index) => `
+    // Set header content based on trade type
+    if (tradeType === 'receive') {
+      icon.textContent = '📥';
+      title.textContent = 'You Can Get';
+      subtitle.innerHTML = `Click stickers to select which ones you want from <strong>${escapeHtml(username)}</strong>`;
+      countBadge.className = 'trade-count-badge receive';
+      grid.className = 'sticker-grid receive';
+    } else {
+      icon.textContent = '📤';
+      title.textContent = 'You Can Give';
+      subtitle.innerHTML = `Click stickers to select which ones you can trade to <strong>${escapeHtml(username)}</strong>`;
+      countBadge.className = 'trade-count-badge give';
+      grid.className = 'sticker-grid give';
+    }
+
+    // Set count badge
+    countBadge.textContent = `${count} sticker${count !== 1 ? 's' : ''}`;
+
+    // Populate sticker grid with clickable cards
+    grid.innerHTML = stickers.map((stickerId, index) => `
     <div class="sticker-card ${tradeType}" data-sticker-id="${escapeHtml(stickerId)}" data-index="${index}" onclick="toggleStickerSelection(this)">
       <div class="sticker-card-select-indicator">
         <span class="select-checkbox">⭕</span>
@@ -517,1563 +509,1579 @@ function openTradeModal(element) {
     </div>
   `).join('');
 
-  // Reset selection UI
-  updateSelectionUI();
+    // Reset selection UI
+    updateSelectionUI();
 
-  // Show modal
-  modal.classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeTradeModal() {
-  const modal = document.getElementById('tradeModal');
-  modal.classList.remove('active');
-  document.body.style.overflow = '';
-
-  // Clear selection
-  currentTradeData.selectedStickers.clear();
-}
-
-function toggleStickerSelection(card) {
-  const stickerId = card.dataset.stickerId;
-  const isSelected = currentTradeData.selectedStickers.has(stickerId);
-
-  if (isSelected) {
-    currentTradeData.selectedStickers.delete(stickerId);
-    card.classList.remove('selected');
-  } else {
-    currentTradeData.selectedStickers.add(stickerId);
-    card.classList.add('selected');
+    // Show modal
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
   }
 
-  updateSelectionUI();
-}
+  function closeTradeModal() {
+    const modal = document.getElementById('tradeModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
 
-function updateSelectionUI() {
-  const selectedCount = currentTradeData.selectedStickers.size;
-  const selectionCountEl = document.getElementById('selectionCount');
-  const contactBtn = document.getElementById('contactTradeBtn');
-
-  selectionCountEl.textContent = `${selectedCount} selected`;
-
-  // Enable/disable contact button
-  contactBtn.disabled = selectedCount === 0;
-  if (selectedCount > 0) {
-    contactBtn.innerHTML = `📧 Contact for Trade (${selectedCount})`;
-  } else {
-    contactBtn.innerHTML = '📧 Contact for Trade';
+    // Clear selection
+    currentTradeData.selectedStickers.clear();
   }
-}
 
-// Compose Modal Functions
-function openComposeModal() {
-  if (currentTradeData.selectedStickers.size === 0) return;
+  function toggleStickerSelection(card) {
+    const stickerId = card.dataset.stickerId;
+    const isSelected = currentTradeData.selectedStickers.has(stickerId);
 
-  const modal = document.getElementById('composeModal');
-  const recipientEl = document.getElementById('composeRecipient');
-  const stickersGrid = document.getElementById('composeStickersGrid');
-  const messageTextarea = document.getElementById('tradeMessage');
+    if (isSelected) {
+      currentTradeData.selectedStickers.delete(stickerId);
+      card.classList.remove('selected');
+    } else {
+      currentTradeData.selectedStickers.add(stickerId);
+      card.classList.add('selected');
+    }
 
-  // Set recipient
-  recipientEl.textContent = currentTradeData.username;
+    updateSelectionUI();
+  }
 
-  // Populate selected stickers
-  const selectedStickerIds = Array.from(currentTradeData.selectedStickers);
-  stickersGrid.innerHTML = selectedStickerIds.map(stickerId => `
+  function updateSelectionUI() {
+    const selectedCount = currentTradeData.selectedStickers.size;
+    const selectionCountEl = document.getElementById('selectionCount');
+    const contactBtn = document.getElementById('contactTradeBtn');
+
+    selectionCountEl.textContent = `${selectedCount} selected`;
+
+    // Enable/disable contact button
+    contactBtn.disabled = selectedCount === 0;
+    if (selectedCount > 0) {
+      contactBtn.innerHTML = `📧 Contact for Trade (${selectedCount})`;
+    } else {
+      contactBtn.innerHTML = '📧 Contact for Trade';
+    }
+  }
+
+  // Compose Modal Functions
+  function openComposeModal() {
+    if (currentTradeData.selectedStickers.size === 0) return;
+
+    const modal = document.getElementById('composeModal');
+    const recipientEl = document.getElementById('composeRecipient');
+    const stickersGrid = document.getElementById('composeStickersGrid');
+    const messageTextarea = document.getElementById('tradeMessage');
+
+    // Set recipient
+    recipientEl.textContent = currentTradeData.username;
+
+    // Populate selected stickers
+    const selectedStickerIds = Array.from(currentTradeData.selectedStickers);
+    stickersGrid.innerHTML = selectedStickerIds.map(stickerId => `
     <div class="compose-sticker-item ${currentTradeData.tradeType}">
       <span class="compose-sticker-id">${escapeHtml(stickerId)}</span>
     </div>
   `).join('');
 
-  // Generate default message
-  const currentUser = '{{ current_user.username }}';
-  const stickerList = selectedStickerIds.join(', ');
-  const tradeTypeText = currentTradeData.tradeType === 'receive' ? 'get' : 'give';
+    // Generate default message
+    const currentUser = '{{ current_user.username }}';
+    const stickerList = selectedStickerIds.join(', ');
+    const tradeTypeText = currentTradeData.tradeType === 'receive' ? 'get' : 'give';
 
-  const defaultMessage = `Hi there! My name is ${currentUser}.\n\n` +
-    `I would like to ${tradeTypeText} these stickers: ${stickerList}.\n\n` +
-    `Can we please trade? Let me know what you have available or what you're looking for!\n\n` +
-    `Thanks,\n${currentUser}`;
+    const defaultMessage = `Hi there! My name is ${currentUser}.\n\n` +
+      `I would like to ${tradeTypeText} these stickers: ${stickerList}.\n\n` +
+      `Can we please trade? Let me know what you have available or what you're looking for!\n\n` +
+      `Thanks,\n${currentUser}`;
 
-  messageTextarea.value = defaultMessage;
+    messageTextarea.value = defaultMessage;
 
-  // Show modal
-  modal.classList.add('active');
-}
-
-function closeComposeModal() {
-  const modal = document.getElementById('composeModal');
-  modal.classList.remove('active');
-}
-
-function sendTradeMessage() {
-  const message = document.getElementById('tradeMessage').value.trim();
-  const selectedStickers = Array.from(currentTradeData.selectedStickers);
-
-  if (!message) {
-    alert('Please write a message before sending.');
-    return;
+    // Show modal
+    modal.classList.add('active');
   }
 
-  if (selectedStickers.length === 0) {
-    alert('Please select at least one sticker.');
-    return;
+  function closeComposeModal() {
+    const modal = document.getElementById('composeModal');
+    modal.classList.remove('active');
   }
 
-  const sendBtn = document.getElementById('sendTradeBtn');
-  const originalText = sendBtn.innerHTML;
-  sendBtn.innerHTML = '📤 Sending...';
-  sendBtn.disabled = true;
+  function sendTradeMessage() {
+    const message = document.getElementById('tradeMessage').value.trim();
+    const selectedStickers = Array.from(currentTradeData.selectedStickers);
 
-  // Prepare the request data
-  const requestData = {
-    recipient_username: currentTradeData.username,
-    stickers: selectedStickers,
-    content: message,
-    trade_type: currentTradeData.tradeType
-  };
-
-  // Make actual API call to internal messaging system
-  fetch('/auth/api/messages/send', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest'
-    },
-    body: JSON.stringify(requestData)
-  })
-  .then(response => response.json())
-  .then(data => {
-    // Reset button
-    sendBtn.innerHTML = originalText;
-    sendBtn.disabled = false;
-
-    if (data.success) {
-      // Close compose modal
-      closeComposeModal();
-
-      // Close trade modal
-      closeTradeModal();
-
-      // Show success toast
-      showSuccessToast();
-
-      // Clear selection
-      currentTradeData.selectedStickers.clear();
-    } else {
-      alert(data.error || 'Failed to send message. Please try again.');
+    if (!message) {
+      alert('Please write a message before sending.');
+      return;
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    sendBtn.innerHTML = originalText;
-    sendBtn.disabled = false;
-    alert('An error occurred while sending the message. Please check your connection and try again.');
+
+    if (selectedStickers.length === 0) {
+      alert('Please select at least one sticker.');
+      return;
+    }
+
+    const sendBtn = document.getElementById('sendTradeBtn');
+    const originalText = sendBtn.innerHTML;
+    sendBtn.innerHTML = '📤 Sending...';
+    sendBtn.disabled = true;
+
+    // Prepare the request data
+    const requestData = {
+      recipient_username: currentTradeData.username,
+      stickers: selectedStickers,
+      content: message,
+      trade_type: currentTradeData.tradeType
+    };
+
+    // Make actual API call to internal messaging system
+    fetch('/auth/api/messages/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify(requestData)
+    })
+      .then(response => response.json())
+      .then(data => {
+        // Reset button
+        sendBtn.innerHTML = originalText;
+        sendBtn.disabled = false;
+
+        if (data.success) {
+          // Close compose modal
+          closeComposeModal();
+
+          // Close trade modal
+          closeTradeModal();
+
+          // Show success toast
+          showSuccessToast();
+
+          // Clear selection
+          currentTradeData.selectedStickers.clear();
+        } else {
+          alert(data.error || 'Failed to send message. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        sendBtn.innerHTML = originalText;
+        sendBtn.disabled = false;
+        alert('An error occurred while sending the message. Please check your connection and try again.');
+      });
+  }
+
+  // Success Toast Functions
+  function showSuccessToast() {
+    const toast = document.getElementById('successToast');
+    toast.classList.add('active');
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      closeSuccessToast();
+    }, 5000);
+  }
+
+  function closeSuccessToast() {
+    const toast = document.getElementById('successToast');
+    toast.classList.remove('active');
+  }
+
+  // Close trade modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const composeModal = document.getElementById('composeModal');
+      const tradeModal = document.getElementById('tradeModal');
+
+      if (composeModal.classList.contains('active')) {
+        closeComposeModal();
+      } else if (tradeModal.classList.contains('active')) {
+        closeTradeModal();
+      }
+    }
   });
-}
 
-// Success Toast Functions
-function showSuccessToast() {
-  const toast = document.getElementById('successToast');
-  toast.classList.add('active');
-
-  // Auto-hide after 5 seconds
-  setTimeout(() => {
-    closeSuccessToast();
-  }, 5000);
-}
-
-function closeSuccessToast() {
-  const toast = document.getElementById('successToast');
-  toast.classList.remove('active');
-}
-
-// Close trade modal on Escape key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    const composeModal = document.getElementById('composeModal');
-    const tradeModal = document.getElementById('tradeModal');
-
-    if (composeModal.classList.contains('active')) {
-      closeComposeModal();
-    } else if (tradeModal.classList.contains('active')) {
-      closeTradeModal();
-    }
+  // Escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
-});
 
-// Escape HTML to prevent XSS
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+  // Expose functions to global scope for inline onclick handlers
+  window.openTradeModal = openTradeModal;
+  window.toggleStickerSelection = toggleStickerSelection;
+  window.closeTradeModal = closeTradeModal;
+  window.openComposeModal = openComposeModal;
+  window.closeComposeModal = closeComposeModal;
+  window.sendTradeMessage = sendTradeMessage;
+  window.showSuccessToast = showSuccessToast;
+  window.closeSuccessToast = closeSuccessToast;
+  window.clearSearch = clearSearch;
+  window.filterUsers = filterUsers;
+})();
 </script>
 
 <style>
-/* Users Page Styles - Compact */
-.users-section {
-  padding: 0.75rem 0.5rem;
-  min-height: calc(100vh - 100px);
-}
-
-.users-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* Header - Compact */
-.users-header {
-  text-align: center;
-  margin-bottom: 1rem;
-}
-
-.users-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 0.35rem 0;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.users-subtitle {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-  margin-bottom: 0.75rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.current-user-stats {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.stat-badge {
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: 50px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
-  color: var(--color-text);
-}
-
-/* Header Layout with Search */
-.header-top {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  padding: 0 0.5rem;
-  position: relative;
-}
-
-.users-title {
-  margin: 0;
-  text-align: center;
-}
-
-.search-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.search-input {
-  width: 280px;
-  padding: 0.6rem 1rem;
-  font-size: 0.9rem;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 8px;
-  color: var(--color-text);
-  transition: all 0.2s;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
-}
-
-.search-input::placeholder {
-  color: var(--color-text-muted);
-  opacity: 0.7;
-}
-
-.search-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 8px;
-  background: rgba(148, 163, 184, 0.1);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.search-btn:hover {
-  background: rgba(148, 163, 184, 0.2);
-  color: var(--color-text);
-}
-
-.search-btn.hidden {
-  display: none;
-}
-
-/* No Results Message */
-.no-results {
-  text-align: center;
-  padding: 3rem 2rem;
-  margin-top: 1rem;
-}
-
-.no-results .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.no-results .empty-icon {
-  font-size: 3rem;
-  opacity: 0.5;
-}
-
-.no-results h2 {
-  font-size: 1.25rem;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.no-results p {
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-/* Responsive for search */
-@media (max-width: 640px) {
-  .header-top {
-    flex-direction: column;
-    gap: 0.75rem;
-    padding-bottom: 2.5rem;
+  /* Users Page Styles - Compact */
+  .users-section {
+    padding: 0.75rem 0.5rem;
+    min-height: calc(100vh - 100px);
   }
 
-  .search-container {
-    position: static;
-    transform: none;
-    width: 100%;
-    justify-content: center;
+  .users-container {
+    max-width: 1200px;
+    margin: 0 auto;
   }
 
-  .search-input {
-    width: 220px;
-  }
-}
-
-.stat-badge strong {
-  color: var(--color-accent);
-}
-
-/* Users Grid - 5 cards per row, larger gap */
-.users-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.75rem;
-}
-
-/* User Card - 1.5x larger sizes */
-.user-card {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 14px;
-  padding: 1rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.user-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-}
-
-.user-card.top-match {
-  border-color: rgba(56, 189, 248, 0.5);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
-}
-
-/* Card Header - Larger */
-.user-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.6rem;
-}
-
-.rank-badge {
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
-.match-score {
-  text-align: right;
-  padding: 0.5rem 0.8rem;
-  background: rgba(148, 163, 184, 0.1);
-  border-radius: 8px;
-  min-width: 70px;
-}
-
-.match-score.has-matches {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-}
-
-.match-label {
-  display: block;
-  font-size: 0.65rem;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.match-value {
-  display: block;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.match-score.has-matches .match-value {
-  color: #22c55e;
-}
-
-/* User Info Section - Larger */
-.user-info-section {
-  display: flex;
-  gap: 0.8rem;
-  margin-bottom: 0.7rem;
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-.user-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  border: 2px solid var(--color-accent);
-}
-
-.user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #fff;
-}
-
-.user-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.user-name {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 0.15rem 0;
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-email {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  margin: 0 0 0.15rem 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-since {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  opacity: 0.7;
-}
-
-/* User Name Row with Stars */
-.user-name-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.15rem;
-}
-
-.user-name-row .user-name {
-  margin: 0;
-  flex: 1;
-  min-width: 0;
-}
-
-.user-stars {
-  flex-shrink: 0;
-  margin-left: 0.5rem;
-}
-
-.user-stars .star-badge {
-  font-size: 0.8rem;
-  color: #fbbf24;
-  font-weight: 500;
-}
-
-/* User Country Display */
-.user-country {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.25rem;
-}
-
-.user-country-flag {
-  width: 16px;
-  height: 12px;
-  border-radius: 2px;
-  object-fit: cover;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.user-country-name {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-/* Collection Stats - Larger */
-.collection-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.4rem;
-  margin-bottom: 0.6rem;
-}
-
-.collection-stats .stat-item {
-  text-align: center;
-  padding: 0.6rem 0.4rem;
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.collection-stats .stat-value {
-  display: block;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--color-accent);
-}
-
-.collection-stats .stat-label {
-  display: block;
-  font-size: 0.65rem;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  margin-top: 0.1rem;
-}
-
-/* Progress Bar - Larger */
-.progress-bar-container {
-  height: 5px;
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 3px;
-  margin-bottom: 0.8rem;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong));
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-/* Trading Section - Larger side-by-side */
-.trading-section {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-bottom: 0.8rem;
-}
-
-.trade-block {
-  padding: 0.6rem;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 8px;
-}
-
-.trade-block.has-items {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.3);
-}
-
-.trade-header {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 0.4rem;
-}
-
-.trade-icon {
-  font-size: 0.9rem;
-}
-
-.trade-title {
-  flex: 1;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.trade-count {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--color-accent);
-  background: rgba(56, 189, 248, 0.2);
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  min-width: 22px;
-  text-align: center;
-}
-
-.trade-block.has-items .trade-count {
-  background: rgba(34, 197, 94, 0.3);
-  color: #22c55e;
-}
-
-.sticker-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
-.sticker-tag {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.35rem;
-  background: rgba(56, 189, 248, 0.2);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: 4px;
-  color: var(--color-text);
-  font-family: monospace;
-}
-
-.sticker-tag.give {
-  background: rgba(249, 115, 22, 0.2);
-  border-color: rgba(249, 115, 22, 0.3);
-}
-
-.more-tag {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.35rem;
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 4px;
-  color: var(--color-text-muted);
-}
-
-.no-trade {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  margin: 0;
-  font-style: italic;
-}
-
-/* User Actions - Larger */
-.user-actions {
-  margin-top: auto;
-}
-
-.contact-btn {
-  width: 100%;
-  text-align: center;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
-}
-
-/* Modal Styles */
-.user-card-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-}
-
-.user-card-modal.active {
-  display: flex;
-}
-
-.user-card-modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  cursor: pointer;
-}
-
-.user-card-modal-content {
-  position: relative;
-  z-index: 1001;
-  max-width: 500px;
-  width: 90%;
-  animation: modalSlideIn 0.3s ease;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.modal-close-btn {
-  position: absolute;
-  top: -40px;
-  right: 0;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 2rem;
-  cursor: pointer;
-  opacity: 0.8;
-  transition: opacity 0.2s;
-  z-index: 1002;
-}
-
-.modal-close-btn:hover {
-  opacity: 1;
-}
-
-/* Expanded card in modal */
-.user-card-modal-content .user-card {
-  cursor: default;
-  transform: none !important;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.user-card-modal-content .user-card:hover {
-  transform: none !important;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-}
-
-/* Make card in modal larger */
-.user-card-modal-content .user-card {
-  padding: 1.5rem;
-}
-
-.user-card-modal-content .user-avatar {
-  width: 60px;
-  height: 60px;
-}
-
-.user-card-modal-content .avatar-placeholder {
-  font-size: 1.5rem;
-}
-
-.user-card-modal-content .user-name {
-  font-size: 1.2rem;
-}
-
-.user-card-modal-content .user-email {
-  font-size: 0.9rem;
-}
-
-.user-card-modal-content .collection-stats .stat-value {
-  font-size: 1.4rem;
-}
-
-.user-card-modal-content .match-value {
-  font-size: 1.6rem;
-}
-
-.user-card-modal-content .sticker-tags {
-  max-height: 100px;
-  overflow-y: auto;
-}
-
-/* Empty State */
-.no-users-message {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.empty-state {
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-.empty-icon {
-  font-size: 4rem;
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.empty-state h2 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--color-text);
-}
-
-.empty-state p {
-  color: var(--color-text-muted);
-}
-
-/* Responsive - 5 columns on desktop, scaling down */
-@media (max-width: 1400px) {
-  .users-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (max-width: 1100px) {
-  .users-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 800px) {
-  .users-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 500px) {
-  .users-grid {
-    grid-template-columns: 1fr;
+  /* Header - Compact */
+  .users-header {
+    text-align: center;
+    margin-bottom: 1rem;
   }
 
   .users-title {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem 0;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .users-subtitle {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .current-user-stats {
-    flex-direction: column;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .stat-badge {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 50px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    color: var(--color-text);
+  }
+
+  /* Header Layout with Search */
+  .header-top {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0 0.5rem;
+    position: relative;
+  }
+
+  .users-title {
+    margin: 0;
+    text-align: center;
+  }
+
+  .search-container {
+    display: flex;
     align-items: center;
     gap: 0.5rem;
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
   }
 
-  .trading-section {
-    grid-template-columns: 1fr;
+  .search-input {
+    width: 280px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    color: var(--color-text);
+    transition: all 0.2s;
   }
 
-  .user-card-modal-content {
-    width: 95%;
-    max-width: none;
-  }
-}
-
-/* Trade Modal Styles */
-.trade-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2000;
-  align-items: center;
-  justify-content: center;
-}
-
-.trade-modal.active {
-  display: flex;
-}
-
-.trade-modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  cursor: pointer;
-}
-
-.trade-modal-content {
-  position: relative;
-  z-index: 2001;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 24px;
-  max-width: 700px;
-  width: 90%;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
-  animation: tradeModalSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes tradeModalSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-40px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.trade-modal-close {
-  position: absolute;
-  top: -45px;
-  right: 0;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 2.2rem;
-  cursor: pointer;
-  opacity: 0.8;
-  transition: opacity 0.2s, transform 0.2s;
-  z-index: 2002;
-  line-height: 1;
-}
-
-.trade-modal-close:hover {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-/* Trade Modal Header */
-.trade-modal-header {
-  padding: 2rem 2rem 1.5rem;
-  text-align: center;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
-}
-
-.trade-modal-icon {
-  font-size: 3.5rem;
-  margin-bottom: 0.75rem;
-  display: block;
-}
-
-.trade-modal-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
-  color: #fff;
-}
-
-.trade-modal-subtitle {
-  font-size: 1rem;
-  color: #94a3b8;
-  margin: 0;
-}
-
-.trade-modal-subtitle strong {
-  color: #38bdf8;
-}
-
-/* Trade Modal Body */
-.trade-modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.5rem 2rem;
-}
-
-.trade-count-badge {
-  display: inline-block;
-  padding: 0.5rem 1.25rem;
-  border-radius: 50px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  width: 100%;
-}
-
-.trade-count-badge.receive {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80;
-}
-
-.trade-count-badge.give {
-  background: rgba(249, 115, 22, 0.15);
-  border: 1px solid rgba(249, 115, 22, 0.3);
-  color: #fb923c;
-}
-
-/* Sticker Grid */
-.sticker-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
-}
-
-.sticker-card {
-  background: rgba(15, 23, 42, 0.8);
-  border: 2px solid;
-  border-radius: 12px;
-  padding: 1.25rem;
-  text-align: center;
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: default;
-}
-
-.sticker-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
-.sticker-card.receive {
-  border-color: rgba(34, 197, 94, 0.4);
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%);
-}
-
-.sticker-card.receive:hover {
-  border-color: rgba(34, 197, 94, 0.7);
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.2);
-}
-
-.sticker-card.give {
-  border-color: rgba(249, 115, 22, 0.4);
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%);
-}
-
-.sticker-card.give:hover {
-  border-color: rgba(249, 115, 22, 0.7);
-  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.2);
-}
-
-.sticker-card-id {
-  display: block;
-  font-family: 'SF Mono', Monaco, monospace;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 0.5rem;
-}
-
-.sticker-card-action {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.sticker-card.receive .sticker-card-action {
-  color: #4ade80;
-}
-
-.sticker-card.give .sticker-card-action {
-  color: #fb923c;
-}
-
-/* Trade Modal Footer */
-.trade-modal-footer {
-  padding: 1.25rem 2rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.1);
-  text-align: center;
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 0 0 24px 24px;
-}
-
-/* Clickable trade blocks */
-.trade-block.clickable {
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-
-.trade-block.clickable:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-}
-
-.trade-block.clickable[data-trade-type="receive"]:hover {
-  border-color: rgba(34, 197, 94, 0.6);
-}
-
-.trade-block.clickable[data-trade-type="give"]:hover {
-  border-color: rgba(249, 115, 22, 0.6);
-}
-
-.trade-block.clickable .more-tag {
-  color: #38bdf8;
-  font-weight: 600;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-  .trade-modal-content {
-    width: 95%;
-    max-height: 90vh;
+  .search-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
   }
 
-  .trade-modal-header {
-    padding: 1.5rem 1.25rem 1rem;
+  .search-input::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.7;
   }
 
-  .trade-modal-title {
-    font-size: 1.4rem;
+  .search-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s;
   }
 
-  .trade-modal-body {
-    padding: 1rem 1.25rem;
+  .search-btn:hover {
+    background: rgba(148, 163, 184, 0.2);
+    color: var(--color-text);
   }
 
-  .sticker-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  .search-btn.hidden {
+    display: none;
+  }
+
+  /* No Results Message */
+  .no-results {
+    text-align: center;
+    padding: 3rem 2rem;
+    margin-top: 1rem;
+  }
+
+  .no-results .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 0.75rem;
   }
 
-  .sticker-card {
+  .no-results .empty-icon {
+    font-size: 3rem;
+    opacity: 0.5;
+  }
+
+  .no-results h2 {
+    font-size: 1.25rem;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .no-results p {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  /* Responsive for search */
+  @media (max-width: 640px) {
+    .header-top {
+      flex-direction: column;
+      gap: 0.75rem;
+      padding-bottom: 2.5rem;
+    }
+
+    .search-container {
+      position: static;
+      transform: none;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .search-input {
+      width: 220px;
+    }
+  }
+
+  .stat-badge strong {
+    color: var(--color-accent);
+  }
+
+  /* Users Grid - 5 cards per row, larger gap */
+  .users-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+  }
+
+  /* User Card - 1.5x larger sizes */
+  .user-card {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 14px;
     padding: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .user-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .user-card.top-match {
+    border-color: rgba(56, 189, 248, 0.5);
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
+  }
+
+  /* Card Header - Larger */
+  .user-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+  }
+
+  .rank-badge {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .match-score {
+    text-align: right;
+    padding: 0.5rem 0.8rem;
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 8px;
+    min-width: 70px;
+  }
+
+  .match-score.has-matches {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+  }
+
+  .match-label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .match-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .match-score.has-matches .match-value {
+    color: #22c55e;
+  }
+
+  /* User Info Section - Larger */
+  .user-info-section {
+    display: flex;
+    gap: 0.8rem;
+    margin-bottom: 0.7rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid var(--color-accent);
+  }
+
+  .user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .user-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .user-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.15rem 0;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-email {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin: 0 0 0.15rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-since {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    opacity: 0.7;
+  }
+
+  /* User Name Row with Stars */
+  .user-name-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.15rem;
+  }
+
+  .user-name-row .user-name {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .user-stars {
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+  }
+
+  .user-stars .star-badge {
+    font-size: 0.8rem;
+    color: #fbbf24;
+    font-weight: 500;
+  }
+
+  /* User Country Display */
+  .user-country {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
+  }
+
+  .user-country-flag {
+    width: 16px;
+    height: 12px;
+    border-radius: 2px;
+    object-fit: cover;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  .user-country-name {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  /* Collection Stats - Larger */
+  .collection-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .collection-stats .stat-item {
+    text-align: center;
+    padding: 0.6rem 0.4rem;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .collection-stats .stat-value {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .collection-stats .stat-label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    margin-top: 0.1rem;
+  }
+
+  /* Progress Bar - Larger */
+  .progress-bar-container {
+    height: 5px;
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 3px;
+    margin-bottom: 0.8rem;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  /* Trading Section - Larger side-by-side */
+  .trading-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .trade-block {
+    padding: 0.6rem;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+  }
+
+  .trade-block.has-items {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+
+  .trade-header {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .trade-icon {
+    font-size: 0.9rem;
+  }
+
+  .trade-title {
+    flex: 1;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-text);
+  }
+
+  .trade-count {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    background: rgba(56, 189, 248, 0.2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    min-width: 22px;
+    text-align: center;
+  }
+
+  .trade-block.has-items .trade-count {
+    background: rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+  }
+
+  .sticker-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .sticker-tag {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.35rem;
+    background: rgba(56, 189, 248, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 4px;
+    color: var(--color-text);
+    font-family: monospace;
+  }
+
+  .sticker-tag.give {
+    background: rgba(249, 115, 22, 0.2);
+    border-color: rgba(249, 115, 22, 0.3);
+  }
+
+  .more-tag {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.35rem;
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 4px;
+    color: var(--color-text-muted);
+  }
+
+  .no-trade {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    margin: 0;
+    font-style: italic;
+  }
+
+  /* User Actions - Larger */
+  .user-actions {
+    margin-top: auto;
+  }
+
+  .contact-btn {
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  /* Modal Styles */
+  .user-card-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .user-card-modal.active {
+    display: flex;
+  }
+
+  .user-card-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: pointer;
+  }
+
+  .user-card-modal-content {
+    position: relative;
+    z-index: 1001;
+    max-width: 500px;
+    width: 90%;
+    animation: modalSlideIn 0.3s ease;
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9) translateY(-20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    z-index: 1002;
+  }
+
+  .modal-close-btn:hover {
+    opacity: 1;
+  }
+
+  /* Expanded card in modal */
+  .user-card-modal-content .user-card {
+    cursor: default;
+    transform: none !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .user-card-modal-content .user-card:hover {
+    transform: none !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Make card in modal larger */
+  .user-card-modal-content .user-card {
+    padding: 1.5rem;
+  }
+
+  .user-card-modal-content .user-avatar {
+    width: 60px;
+    height: 60px;
+  }
+
+  .user-card-modal-content .avatar-placeholder {
+    font-size: 1.5rem;
+  }
+
+  .user-card-modal-content .user-name {
+    font-size: 1.2rem;
+  }
+
+  .user-card-modal-content .user-email {
+    font-size: 0.9rem;
+  }
+
+  .user-card-modal-content .collection-stats .stat-value {
+    font-size: 1.4rem;
+  }
+
+  .user-card-modal-content .match-value {
+    font-size: 1.6rem;
+  }
+
+  .user-card-modal-content .sticker-tags {
+    max-height: 100px;
+    overflow-y: auto;
+  }
+
+  /* Empty State */
+  .no-users-message {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+
+  .empty-state {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+  }
+
+  .empty-state p {
+    color: var(--color-text-muted);
+  }
+
+  /* Responsive - 5 columns on desktop, scaling down */
+  @media (max-width: 1400px) {
+    .users-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (max-width: 1100px) {
+    .users-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 800px) {
+    .users-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 500px) {
+    .users-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .users-title {
+      font-size: 1.25rem;
+    }
+
+    .current-user-stats {
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .trading-section {
+      grid-template-columns: 1fr;
+    }
+
+    .user-card-modal-content {
+      width: 95%;
+      max-width: none;
+    }
+  }
+
+  /* Trade Modal Styles */
+  .trade-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .trade-modal.active {
+    display: flex;
+  }
+
+  .trade-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    cursor: pointer;
+  }
+
+  .trade-modal-content {
+    position: relative;
+    z-index: 2001;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 24px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+    animation: tradeModalSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes tradeModalSlideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9) translateY(-40px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .trade-modal-close {
+    position: absolute;
+    top: -45px;
+    right: 0;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2.2rem;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 2002;
+    line-height: 1;
+  }
+
+  .trade-modal-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  /* Trade Modal Header */
+  .trade-modal-header {
+    padding: 2rem 2rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+  }
+
+  .trade-modal-icon {
+    font-size: 3.5rem;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .trade-modal-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #fff;
+  }
+
+  .trade-modal-subtitle {
+    font-size: 1rem;
+    color: #94a3b8;
+    margin: 0;
+  }
+
+  .trade-modal-subtitle strong {
+    color: #38bdf8;
+  }
+
+  /* Trade Modal Body */
+  .trade-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem 2rem;
+  }
+
+  .trade-count-badge {
+    display: inline-block;
+    padding: 0.5rem 1.25rem;
+    border-radius: 50px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    width: 100%;
+  }
+
+  .trade-count-badge.receive {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+  }
+
+  .trade-count-badge.give {
+    background: rgba(249, 115, 22, 0.15);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    color: #fb923c;
+  }
+
+  /* Sticker Grid */
+  .sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+
+  .sticker-card {
+    background: rgba(15, 23, 42, 0.8);
+    border: 2px solid;
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+
+  .sticker-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .sticker-card.receive {
+    border-color: rgba(34, 197, 94, 0.4);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%);
+  }
+
+  .sticker-card.receive:hover {
+    border-color: rgba(34, 197, 94, 0.7);
+    box-shadow: 0 8px 24px rgba(34, 197, 94, 0.2);
+  }
+
+  .sticker-card.give {
+    border-color: rgba(249, 115, 22, 0.4);
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%);
+  }
+
+  .sticker-card.give:hover {
+    border-color: rgba(249, 115, 22, 0.7);
+    box-shadow: 0 8px 24px rgba(249, 115, 22, 0.2);
   }
 
   .sticker-card-id {
-    font-size: 1.1rem;
-  }
-}
-
-/* Sticker Card Selection Styles */
-.sticker-card {
-  cursor: pointer;
-  position: relative;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-
-.sticker-card.selected {
-  transform: scale(1.05);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-.sticker-card.selected.receive {
-  border-color: #22c55e;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%);
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
-}
-
-.sticker-card.selected.give {
-  border-color: #f97316;
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%);
-  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.3);
-}
-
-.sticker-card-select-indicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 1.2rem;
-}
-
-.sticker-card .selected-checkbox {
-  display: none;
-}
-
-.sticker-card.selected .select-checkbox {
-  display: none;
-}
-
-.sticker-card.selected .selected-checkbox {
-  display: block;
-}
-
-/* Trade Modal Footer Actions */
-.trade-modal-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.trade-selection-info {
-  text-align: center;
-}
-
-.selection-count {
-  font-size: 0.95rem;
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-.trade-modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.trade-modal-actions .btn {
-  min-width: 140px;
-}
-
-.trade-modal-actions .btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Compose Modal Styles */
-.compose-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 3000;
-  align-items: center;
-  justify-content: center;
-}
-
-.compose-modal.active {
-  display: flex;
-}
-
-.compose-modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  cursor: pointer;
-}
-
-.compose-modal-content {
-  position: relative;
-  z-index: 3001;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 24px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);
-  animation: composeModalSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes composeModalSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-40px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.compose-modal-close {
-  position: absolute;
-  top: -45px;
-  right: 0;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 2.2rem;
-  cursor: pointer;
-  opacity: 0.8;
-  transition: opacity 0.2s, transform 0.2s;
-  z-index: 3002;
-  line-height: 1;
-}
-
-.compose-modal-close:hover {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-.compose-modal-header {
-  padding: 2rem 2rem 1.5rem;
-  text-align: center;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
-  border-radius: 24px 24px 0 0;
-}
-
-.compose-modal-icon {
-  font-size: 3.5rem;
-  margin-bottom: 0.75rem;
-  display: block;
-}
-
-.compose-modal-title {
-  font-size: 1.6rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
-  color: #fff;
-}
-
-.compose-modal-subtitle {
-  font-size: 1rem;
-  color: #94a3b8;
-  margin: 0;
-}
-
-.compose-modal-subtitle strong {
-  color: #a78bfa;
-}
-
-.compose-modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.5rem 2rem;
-}
-
-/* Compose Stickers Section */
-.compose-stickers-section {
-  margin-bottom: 1.5rem;
-}
-
-.compose-label {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #e2e8f0;
-  margin-bottom: 0.75rem;
-}
-
-.compose-stickers-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  max-height: 100px;
-  overflow-y: auto;
-  padding: 0.5rem;
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.1);
-}
-
-.compose-sticker-item {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.4rem 0.8rem;
-  border-radius: 8px;
-  font-family: 'SF Mono', Monaco, monospace;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.compose-sticker-item.receive {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80;
-}
-
-.compose-sticker-item.give {
-  background: rgba(249, 115, 22, 0.15);
-  border: 1px solid rgba(249, 115, 22, 0.3);
-  color: #fb923c;
-}
-
-/* Compose Message Section */
-.compose-message-section {
-  margin-top: 1rem;
-}
-
-.compose-textarea {
-  width: 100%;
-  padding: 1rem;
-  border: 2px solid rgba(148, 163, 184, 0.2);
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.7);
-  color: #e2e8f0;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  resize: vertical;
-  min-height: 120px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.compose-textarea:focus {
-  outline: none;
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
-}
-
-.compose-textarea::placeholder {
-  color: #64748b;
-}
-
-.compose-hint {
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  color: #94a3b8;
-}
-
-.compose-modal-footer {
-  padding: 1.25rem 2rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.1);
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 0 0 24px 24px;
-}
-
-/* Success Toast Styles */
-.success-toast {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 4000;
-  transform: translateX(150%);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.success-toast.active {
-  transform: translateX(0);
-}
-
-.success-toast-content {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border: 1px solid rgba(52, 211, 153, 0.4);
-  border-radius: 16px;
-  padding: 1.25rem 1.5rem;
-  box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
-  min-width: 320px;
-}
-
-.success-toast-icon {
-  font-size: 1.8rem;
-  flex-shrink: 0;
-}
-
-.success-toast-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.success-toast-text strong {
-  color: #fff;
-  font-size: 1.1rem;
-}
-
-.success-toast-text span {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
-}
-
-.success-toast-close {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 1.5rem;
-  cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-  line-height: 1;
-}
-
-.success-toast-close:hover {
-  opacity: 1;
-}
-
-/* Success button style */
-.btn-success {
-  background: linear-gradient(135deg, #10b981, #059669);
-  border-color: #059669;
-  color: #fff;
-}
-
-.btn-success:hover {
-  background: linear-gradient(135deg, #059669, #047857);
-  border-color: #047857;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-/* Responsive adjustments */
-@media (max-width: 600px) {
-  .compose-modal-content {
-    width: 95%;
-    max-height: 95vh;
+    display: block;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
   }
 
-  .compose-modal-header {
-    padding: 1.5rem 1.25rem 1rem;
+  .sticker-card-action {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
-  .compose-modal-body {
-    padding: 1rem 1.25rem;
+  .sticker-card.receive .sticker-card-action {
+    color: #4ade80;
   }
 
-  .compose-modal-footer {
-    padding: 1rem 1.25rem;
-    flex-direction: column;
+  .sticker-card.give .sticker-card-action {
+    color: #fb923c;
   }
 
-  .compose-modal-footer .btn {
-    width: 100%;
+  /* Trade Modal Footer */
+  .trade-modal-footer {
+    padding: 1.25rem 2rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    text-align: center;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 0 0 24px 24px;
   }
 
-  .success-toast {
-    left: 10px;
-    right: 10px;
-    top: 10px;
+  /* Clickable trade blocks */
+  .trade-block.clickable {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   }
 
-  .success-toast-content {
-    min-width: auto;
-    width: 100%;
+  .trade-block.clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  .trade-block.clickable[data-trade-type="receive"]:hover {
+    border-color: rgba(34, 197, 94, 0.6);
+  }
+
+  .trade-block.clickable[data-trade-type="give"]:hover {
+    border-color: rgba(249, 115, 22, 0.6);
+  }
+
+  .trade-block.clickable .more-tag {
+    color: #38bdf8;
+    font-weight: 600;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .trade-modal-content {
+      width: 95%;
+      max-height: 90vh;
+    }
+
+    .trade-modal-header {
+      padding: 1.5rem 1.25rem 1rem;
+    }
+
+    .trade-modal-title {
+      font-size: 1.4rem;
+    }
+
+    .trade-modal-body {
+      padding: 1rem 1.25rem;
+    }
+
+    .sticker-grid {
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .sticker-card {
+      padding: 1rem;
+    }
+
+    .sticker-card-id {
+      font-size: 1.1rem;
+    }
+  }
+
+  /* Sticker Card Selection Styles */
+  .sticker-card {
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .sticker-card.selected {
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .sticker-card.selected.receive {
+    border-color: #22c55e;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%);
+    box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
+  }
+
+  .sticker-card.selected.give {
+    border-color: #f97316;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%);
+    box-shadow: 0 8px 24px rgba(249, 115, 22, 0.3);
   }
 
   .sticker-card-select-indicator {
-    font-size: 1rem;
-    top: 6px;
-    right: 6px;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 1.2rem;
   }
-}
+
+  .sticker-card .selected-checkbox {
+    display: none;
+  }
+
+  .sticker-card.selected .select-checkbox {
+    display: none;
+  }
+
+  .sticker-card.selected .selected-checkbox {
+    display: block;
+  }
+
+  /* Trade Modal Footer Actions */
+  .trade-modal-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .trade-selection-info {
+    text-align: center;
+  }
+
+  .selection-count {
+    font-size: 0.95rem;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+
+  .trade-modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .trade-modal-actions .btn {
+    min-width: 140px;
+  }
+
+  .trade-modal-actions .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Compose Modal Styles */
+  .compose-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .compose-modal.active {
+    display: flex;
+  }
+
+  .compose-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    cursor: pointer;
+  }
+
+  .compose-modal-content {
+    position: relative;
+    z-index: 3001;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);
+    animation: composeModalSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes composeModalSlideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9) translateY(-40px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .compose-modal-close {
+    position: absolute;
+    top: -45px;
+    right: 0;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2.2rem;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 3002;
+    line-height: 1;
+  }
+
+  .compose-modal-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  .compose-modal-header {
+    padding: 2rem 2rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+    border-radius: 24px 24px 0 0;
+  }
+
+  .compose-modal-icon {
+    font-size: 3.5rem;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .compose-modal-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #fff;
+  }
+
+  .compose-modal-subtitle {
+    font-size: 1rem;
+    color: #94a3b8;
+    margin: 0;
+  }
+
+  .compose-modal-subtitle strong {
+    color: #a78bfa;
+  }
+
+  .compose-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem 2rem;
+  }
+
+  /* Compose Stickers Section */
+  .compose-stickers-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .compose-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 0.75rem;
+  }
+
+  .compose-stickers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    max-height: 100px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .compose-sticker-item {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .compose-sticker-item.receive {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+  }
+
+  .compose-sticker-item.give {
+    background: rgba(249, 115, 22, 0.15);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    color: #fb923c;
+  }
+
+  /* Compose Message Section */
+  .compose-message-section {
+    margin-top: 1rem;
+  }
+
+  .compose-textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.7);
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .compose-textarea:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  }
+
+  .compose-textarea::placeholder {
+    color: #64748b;
+  }
+
+  .compose-hint {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  .compose-modal-footer {
+    padding: 1.25rem 2rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 0 0 24px 24px;
+  }
+
+  /* Success Toast Styles */
+  .success-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 4000;
+    transform: translateX(150%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .success-toast.active {
+    transform: translateX(0);
+  }
+
+  .success-toast-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: 1px solid rgba(52, 211, 153, 0.4);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
+    min-width: 320px;
+  }
+
+  .success-toast-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+  }
+
+  .success-toast-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .success-toast-text strong {
+    color: #fff;
+    font-size: 1.1rem;
+  }
+
+  .success-toast-text span {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+  }
+
+  .success-toast-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    line-height: 1;
+  }
+
+  .success-toast-close:hover {
+    opacity: 1;
+  }
+
+  /* Success button style */
+  .btn-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-color: #059669;
+    color: #fff;
+  }
+
+  .btn-success:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    border-color: #047857;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    .compose-modal-content {
+      width: 95%;
+      max-height: 95vh;
+    }
+
+    .compose-modal-header {
+      padding: 1.5rem 1.25rem 1rem;
+    }
+
+    .compose-modal-body {
+      padding: 1rem 1.25rem;
+    }
+
+    .compose-modal-footer {
+      padding: 1rem 1.25rem;
+      flex-direction: column;
+    }
+
+    .compose-modal-footer .btn {
+      width: 100%;
+    }
+
+    .success-toast {
+      left: 10px;
+      right: 10px;
+      top: 10px;
+    }
+
+    .success-toast-content {
+      min-width: auto;
+      width: 100%;
+    }
+
+    .sticker-card-select-indicator {
+      font-size: 1rem;
+      top: 6px;
+      right: 6px;
+    }
+  }
 </style>
 {% endblock %}
