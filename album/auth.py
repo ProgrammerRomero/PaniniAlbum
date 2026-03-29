@@ -69,20 +69,20 @@ def register():
             errors.append("El usuario debe tener al menos 3 caracteres.")
 
         if not email or not validate_email(email):
-            errors.append("Ingresa un correo electrónico válido.")
+            errors.append("Please enter a valid email address.")
 
         if not password or len(password) < 6:
-            errors.append("La contraseña debe tener al menos 6 caracteres.")
+            errors.append("Password must be at least 6 characters.")
 
         if password != confirm_password:
-            errors.append("Las contraseñas no coinciden.")
+            errors.append("Passwords do not match.")
 
         # Check for existing user
         if User.query.filter_by(username=username).first():
             errors.append("Este nombre de usuario ya está registrado.")
 
         if User.query.filter_by(email=email).first():
-            errors.append("Este correo electrónico ya está registrado.")
+            errors.append("This email is already registered.")
 
         if errors:
             for error in errors:
@@ -97,13 +97,13 @@ def register():
 
             # Log in the new user
             login_user(user)
-            flash(f"¡Bienvenido, {username}! Tu cuenta ha sido creada.", "success")
+            flash(f"Welcome, {username}! Your account has been created.", "success")
             return redirect(url_for("album.index"))
 
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Registration error: {e}")
-            flash("Ocurrió un error al crear tu cuenta. Por favor intenta de nuevo.", "error")
+            flash("An error occurred while creating your account. Please try again.", "error")
             return render_template("auth/register.html"), 500
 
     return render_template("auth/register.html")
@@ -139,7 +139,7 @@ def login():
 
         if user and user.check_password(password):
             if not user.is_active:
-                flash("Esta cuenta ha sido desactivada. Contacta soporte.", "error")
+                flash("This account has been deactivated. Contact support.", "error")
                 return render_template("auth/login.html"), 403
 
             # Log in the user
@@ -152,11 +152,11 @@ def login():
             if next_page and not next_page.startswith("/"):
                 next_page = None
 
-            flash(f"¡Bienvenido de nuevo, {user.username}!", "success")
+            flash(f"Welcome back, {user.username}!", "success")
             return redirect(next_page or url_for("album.index"))
 
         else:
-            flash("Usuario o contraseña incorrectos.", "error")
+            flash("Incorrect username or password.", "error")
             return render_template("auth/login.html"), 401
 
     return render_template("auth/login.html")
@@ -171,7 +171,7 @@ def logout():
     Clears the session and redirects to login page.
     """
     logout_user()
-    flash("Has cerrado sesión correctamente.", "info")
+    flash("You have logged out successfully.", "info")
     return redirect(url_for("auth.login"))
 
 
@@ -207,7 +207,7 @@ def forgot_password():
             f.write(f"Email submitted: {email}\n")
 
         if not email:
-            flash("Por favor ingresa tu correo electrónico.", "error")
+            flash("Please enter your email address.", "error")
             return render_template("auth/forgot_password.html"), 400
 
         user = User.query.filter_by(email=email).first()
@@ -233,7 +233,7 @@ def forgot_password():
 
         # Always show success (prevents email enumeration)
         flash(
-            "Si existe una cuenta con ese correo, hemos enviado instrucciones para restablecer tu contraseña.",
+            "If an account exists with that email, we have sent password reset instructions.",
             "success"
         )
         return redirect(url_for("auth.login"))
@@ -258,7 +258,7 @@ def reset_password():
     token_value = request.args.get("token") or request.form.get("token")
 
     if not token_value:
-        flash("Enlace de recuperación inválido.", "error")
+        flash("Invalid recovery link.", "error")
         return redirect(url_for("auth.forgot_password"))
 
     # Find and validate token
@@ -266,8 +266,8 @@ def reset_password():
 
     if not reset_token or not reset_token.is_valid():
         flash(
-            "El enlace de recuperación ha expirado o es inválido. "
-            "Por favor solicita uno nuevo.",
+            "The recovery link has expired or is invalid. "
+            "Please request a new one.",
             "error"
         )
         return redirect(url_for("auth.forgot_password"))
@@ -279,10 +279,10 @@ def reset_password():
         errors = []
 
         if not password or len(password) < 6:
-            errors.append("La contraseña debe tener al menos 6 caracteres.")
+            errors.append("Password must be at least 6 characters.")
 
         if password != confirm_password:
-            errors.append("Las contraseñas no coinciden.")
+            errors.append("Passwords do not match.")
 
         if errors:
             for error in errors:
@@ -296,8 +296,8 @@ def reset_password():
             reset_token.mark_as_used()
 
             flash(
-                "Tu contraseña ha sido actualizada correctamente. "
-                "Ya puedes iniciar sesión con tu nueva contraseña.",
+                "Your password has been updated successfully. "
+                "You can now log in with your new password.",
                 "success"
             )
             return redirect(url_for("auth.login"))
@@ -305,7 +305,7 @@ def reset_password():
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Password reset error: {e}")
-            flash("Ocurrió un error al actualizar tu contraseña. Por favor intenta de nuevo.", "error")
+            flash("An error occurred while updating your password. Please try again.", "error")
             return render_template("auth/reset_password.html", token=token_value), 500
 
     return render_template("auth/reset_password.html", token=token_value)
@@ -854,27 +854,27 @@ def send_password_reset_email(to_email: str, token: str):
             f.write("PASSWORD RESET EMAIL (Console Mode)\n")
             f.write("=" * 60 + "\n")
             f.write(f"To: {to_email}\n")
-            f.write(f"Subject: Recuperación de contraseña - Panini Album\n")
+            f.write(f"Subject: Password Reset - Panini Album\n")
             f.write("-" * 60 + "\n")
-            f.write(f"Para restablecer tu contraseña, haz clic en el siguiente enlace:\n")
+            f.write(f"To reset your password, click on the following link:\n")
             f.write(f"{reset_url}\n")
             f.write("-" * 60 + "\n")
-            f.write(f"Este enlace expirará en 1 hora.\n")
+            f.write(f"This link will expire in 1 hour.\n")
             f.write("=" * 60 + "\n\n")
     elif current_app.config.get("MAIL_SERVER"):
         # Production mode: send actual email
         try:
             from flask_mail import Mail
             mail = Mail(current_app)
-            msg = MailMessage("Recuperación de contraseña - Panini Album")
+            msg = MailMessage("Password Reset - Panini Album")
             msg.recipients = [to_email]
-            msg.body = f"""Para restablecer tu contraseña, haz clic en el siguiente enlace:
+            msg.body = f"""To reset your password, click on the following link:
 
 {reset_url}
 
-Este enlace expirará en 1 hora.
+This link will expire in 1 hour.
 
-Si no solicitaste este cambio, ignora este correo.
+If you didn't request this change, please ignore this email.
 """
             msg.html = render_template("emails/reset_password.html", reset_url=reset_url)
             mail.send(msg)

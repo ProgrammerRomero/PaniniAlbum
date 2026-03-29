@@ -88,7 +88,7 @@ def create_app() -> Flask:
     login_manager = LoginManager()
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"  # Route name for login page
-    login_manager.login_message = "Por favor inicia sesión para acceder a esta página."
+    login_manager.login_message = "Please log in to access this page."
     login_manager.login_message_category = "info"
 
     # Initialize Flask-Mail
