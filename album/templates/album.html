@@ -23,9 +23,8 @@
 
               {% if page.team_code %}
               <div>
-                <img src="{{ url_for('static', filename='images/' + page.title|lower|replace(' ', '_') + '.jpg') }}" alt="{{ page.title }}"
-                  class="team-flag"
-                  onerror="this.style.display='none'">
+                <img src="{{ url_for('static', filename='images/' + page.title|lower|replace(' ', '_') + '.jpg') }}"
+                  alt="{{ page.title }}" class="team-flag" onerror="this.style.display='none'">
               </div>
               {% endif %}
 
@@ -40,13 +39,15 @@
             {% if page.team_code %}
             <div class="team-completion-section">
               <label class="team-toggle-wrapper" title="Toggle all stickers for this team">
-                <input type="checkbox" class="team-toggle" data-team-code="{{ page.team_code }}" data-sticker-ids='{{ page.stickers | map(attribute="id") | list | tojson | safe }}'>
+                <input type="checkbox" class="team-toggle" data-team-code="{{ page.team_code }}"
+                  data-sticker-ids='{{ page.stickers | map(attribute="id") | list | tojson | safe }}'>
                 <span class="team-toggle-slider">
                   <span class="team-toggle-on">✓</span>
                   <span class="team-toggle-off">○</span>
                 </span>
               </label>
-              <span class="team-completed-tag" data-team-code="{{ page.team_code }}" style="display: none;">COMPLETED</span>
+              <span class="team-completed-tag" data-team-code="{{ page.team_code }}"
+                style="display: none;">COMPLETED</span>
             </div>
             {% endif %}
           </header>
@@ -82,9 +83,12 @@
                   Only visible when sticker is marked as owned.
                 -->
                 <div class="duplicate-counter" data-sticker-id="{{ sticker.id }}">
-                  <button type="button" class="duplicate-btn minus-btn" data-sticker-id="{{ sticker.id }}" aria-label="Decrease duplicates">−</button>
-                  <input type="text" inputmode="numeric" pattern="[0-9]*" class="duplicate-count-input" data-sticker-id="{{ sticker.id }}" value="0" min="0" max="999" title="Click to edit or use +/-">
-                  <button type="button" class="duplicate-btn plus-btn" data-sticker-id="{{ sticker.id }}" aria-label="Increase duplicates">+</button>
+                  <button type="button" class="duplicate-btn minus-btn" data-sticker-id="{{ sticker.id }}"
+                    aria-label="Decrease duplicates">−</button>
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" class="duplicate-count-input"
+                    data-sticker-id="{{ sticker.id }}" value="0" min="0" max="999" title="Click to edit or use +/-">
+                  <button type="button" class="duplicate-btn plus-btn" data-sticker-id="{{ sticker.id }}"
+                    aria-label="Increase duplicates">+</button>
                 </div>
               </div>
             </label>
@@ -211,30 +215,30 @@
     {{ album_pages | tojson }}
   </script>
 
-  {% if initial_team %}
-  <script id="initialTeamData" type="application/json">"{{ initial_team }}"</script>
-  {% endif %}
+{% if initial_team %}
+<script id="initialTeamData" type="application/json">"{{ initial_team }}"</script>
+{% endif %}
 
-  <!-- Team Toggle Confirmation Modal -->
-  <div id="teamConfirmModal" class="team-confirm-modal" style="display: none;">
-    <div class="team-confirm-overlay" onclick="cancelTeamToggle()"></div>
-    <div class="team-confirm-content">
-      <div class="team-confirm-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 8v4l3 3" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <h3 class="team-confirm-title">Confirm Action</h3>
-      <p class="team-confirm-message" id="teamConfirmMessage">Are you sure?</p>
-      <div class="team-confirm-buttons">
-        <button type="button" class="team-confirm-btn team-confirm-cancel" onclick="cancelTeamToggle()">Cancel</button>
-        <button type="button" class="team-confirm-btn team-confirm-confirm" onclick="confirmTeamToggle()">Confirm</button>
-      </div>
+<!-- Team Toggle Confirmation Modal -->
+<div id="teamConfirmModal" class="team-confirm-modal" style="display: none;">
+  <div class="team-confirm-overlay" onclick="cancelTeamToggle()"></div>
+  <div class="team-confirm-content">
+    <div class="team-confirm-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 8v4l3 3" stroke-linecap="round" />
+      </svg>
+    </div>
+    <h3 class="team-confirm-title">Confirm Action</h3>
+    <p class="team-confirm-message" id="teamConfirmMessage">Are you sure?</p>
+    <div class="team-confirm-buttons">
+      <button type="button" class="team-confirm-btn team-confirm-cancel" onclick="cancelTeamToggle()">Cancel</button>
+      <button type="button" class="team-confirm-btn team-confirm-confirm" onclick="confirmTeamToggle()">Confirm</button>
     </div>
   </div>
+</div>
 
-  <style>
+<style>
   /* Team Toggle Confirmation Modal */
   .team-confirm-modal {
     position: fixed;
@@ -277,6 +281,7 @@
       opacity: 0;
       transform: scale(0.9) translateY(-20px);
     }
+
     to {
       opacity: 1;
       transform: scale(1) translateY(0);
@@ -369,5 +374,5 @@
     background: linear-gradient(135deg, #dc2626, #b91c1c);
     box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
   }
-  </style>
+</style>
 {% endblock %}

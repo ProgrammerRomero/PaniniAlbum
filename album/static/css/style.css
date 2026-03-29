@@ -407,20 +407,20 @@ a:hover {
 }
 
 /* Toggle ON State */
-.team-toggle:checked + .team-toggle-slider {
+.team-toggle:checked+.team-toggle-slider {
   background: linear-gradient(135deg, #22c55e, #16a34a);
   border-color: rgba(34, 197, 94, 0.5);
 }
 
-.team-toggle:checked + .team-toggle-slider::before {
+.team-toggle:checked+.team-toggle-slider::before {
   transform: translateX(22px);
 }
 
-.team-toggle:checked + .team-toggle-slider .team-toggle-on {
+.team-toggle:checked+.team-toggle-slider .team-toggle-on {
   opacity: 1;
 }
 
-.team-toggle:checked + .team-toggle-slider .team-toggle-off {
+.team-toggle:checked+.team-toggle-slider .team-toggle-off {
   opacity: 0;
 }
 
@@ -451,9 +451,11 @@ a:hover {
     opacity: 0;
     transform: scale(0.8);
   }
+
   50% {
     transform: scale(1.05);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -566,7 +568,7 @@ a:hover {
 }
 
 /* Show duplicate counter more prominently when sticker is owned */
-.sticker-checkbox:checked ~ .sticker-inner .duplicate-counter {
+.sticker-checkbox:checked~.sticker-inner .duplicate-counter {
   opacity: 1;
 }
 
@@ -1052,8 +1054,10 @@ a:hover {
   height: 100vh;
   z-index: 100;
   display: flex;
-  align-items: center;      /* Vertical center */
-  justify-content: center;  /* Horizontal center */
+  align-items: center;
+  /* Vertical center */
+  justify-content: center;
+  /* Horizontal center */
   padding: 1rem;
 
   /* Initial state: invisible */
@@ -1100,7 +1104,7 @@ a:hover {
   transform: scale(0.9) translateY(20px);
   opacity: 0;
   transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
-              opacity 300ms ease;
+    opacity 300ms ease;
 }
 
 /* When modal is open: content animates in */
@@ -1301,7 +1305,7 @@ a:hover {
 
 /* ==========================================================================
    Statistics Dashboard Styles - Team List
-   ========================================================================== */ - cleaner spacing */
+   ==========================================================================  - cleaner spacing */
 .stats-team-list {
   display: flex;
   flex-direction: column;
@@ -1360,10 +1364,12 @@ a:hover {
   transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
 }
+
 .stats-progress-bar {
   height: 100%;
   border-radius: 999px;
-  transition: width 400ms ease-out; /* Smooth animation when value changes */
+  transition: width 400ms ease-out;
+  /* Smooth animation when value changes */
 }
 
 /* ==========================================================================
@@ -1411,6 +1417,7 @@ a:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
 /* ==========================================================================
    Messages Button + Badge Styles
    ========================================================================== */
@@ -1442,9 +1449,12 @@ a:hover {
 }
 
 @keyframes badgePulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }
@@ -1581,9 +1591,12 @@ a:hover {
 }
 
 @keyframes badgePulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.15);
   }
