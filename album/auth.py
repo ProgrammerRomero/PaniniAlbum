@@ -192,34 +192,44 @@ def forgot_password():
     - Token expires after 1 hour
     - Console output in development mode (no real email sent)
     """
-    print("\n\n=== FORGOT PASSWORD ROUTE ACCESSED ===", flush=True)
-    print(f"Request method: {request.method}", flush=True)
+    # Debug logging to file since console isn't visible
+    with open('forgot_password_debug.log', 'a') as f:
+        f.write(f"\n=== FORGOT PASSWORD ACCESSED ===\n")
+        f.write(f"Request method: {request.method}\n")
 
     if current_user.is_authenticated:
-        print("User already authenticated, redirecting...", flush=True)
         return redirect(url_for("album.index"))
 
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
-        print(f"DEBUG: Forgot password requested for email: {email}")  # DEBUG LINE
+
+        with open('forgot_password_debug.log', 'a') as f:
+            f.write(f"Email submitted: {email}\n")
 
         if not email:
             flash("Por favor ingresa tu correo electrónico.", "error")
             return render_template("auth/forgot_password.html"), 400
 
         user = User.query.filter_by(email=email).first()
-        print(f"DEBUG: User found: {user is not None}")  # DEBUG LINE
+
+        with open('forgot_password_debug.log', 'a') as f:
+            f.write(f"User found: {user is not None}\n")
 
         if user:
             # Generate reset token
             token = PasswordResetToken(user_id=user.id)
             db.session.add(token)
             db.session.commit()
-            print(f"DEBUG: Token created, calling send_password_reset_email")  # DEBUG LINE
+
+            with open('forgot_password_debug.log', 'a') as f:
+                f.write(f"Token created, calling send_password_reset_email\n")
 
             # Send email
             send_password_reset_email(user.email, token.token)
-            print(f"DEBUG: Email function completed")  # DEBUG LINE
+
+            with open('forgot_password_debug.log', 'a') as f:
+                f.write(f"Email function completed\n")
+                f.write(f"=== END ===\n\n")
 
         # Always show success (prevents email enumeration)
         flash(
@@ -827,25 +837,30 @@ def send_password_reset_email(to_email: str, token: str):
         to_email: Recipient email address
         token: Reset token to include in the link
     """
-    print(f"\n>>> send_password_reset_email called with: {to_email}", flush=True)
-    print(f"MAIL_SUPPRESS_SEND: {current_app.config.get('MAIL_SUPPRESS_SEND')}", flush=True)
-    print(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}", flush=True)
-
     reset_url = url_for("auth.reset_password", token=token, _external=True)
 
+    # Log to file
+    with open('forgot_password_debug.log', 'a') as f:
+        f.write(f"\n--- send_password_reset_email ---\n")
+        f.write(f"To: {to_email}\n")
+        f.write(f"Reset URL: {reset_url}\n")
+        f.write(f"MAIL_SUPPRESS_SEND: {current_app.config.get('MAIL_SUPPRESS_SEND')}\n")
+        f.write(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}\n")
+
     if current_app.config.get("MAIL_SUPPRESS_SEND"):
-        # Development mode: print to console
-        print("=" * 60)
-        print("PASSWORD RESET EMAIL")
-        print("=" * 60)
-        print(f"To: {to_email}")
-        print(f"Subject: Recuperación de contraseña - Panini Album")
-        print("-" * 60)
-        print(f"Para restablecer tu contraseña, haz clic en el siguiente enlace:")
-        print(f"{reset_url}")
-        print("-" * 60)
-        print(f"Este enlace expirará en 1 hora.")
-        print("=" * 60)
+        # Development mode: write to file
+        with open('forgot_password_debug.log', 'a') as f:
+            f.write("=" * 60 + "\n")
+            f.write("PASSWORD RESET EMAIL (Console Mode)\n")
+            f.write("=" * 60 + "\n")
+            f.write(f"To: {to_email}\n")
+            f.write(f"Subject: Recuperación de contraseña - Panini Album\n")
+            f.write("-" * 60 + "\n")
+            f.write(f"Para restablecer tu contraseña, haz clic en el siguiente enlace:\n")
+            f.write(f"{reset_url}\n")
+            f.write("-" * 60 + "\n")
+            f.write(f"Este enlace expirará en 1 hora.\n")
+            f.write("=" * 60 + "\n\n")
     elif current_app.config.get("MAIL_SERVER"):
         # Production mode: send actual email
         try:
