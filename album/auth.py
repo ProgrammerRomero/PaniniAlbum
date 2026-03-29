@@ -840,7 +840,7 @@ def send_password_reset_email(to_email: str, token: str):
         mail = Mail(current_app)
 
         msg = Message(
-            subject="Recuperación de contraseña - Panini Album",
+            "Recuperación de contraseña - Panini Album",
             recipients=[to_email],
             body=f"""Para restablecer tu contraseña, haz clic en el siguiente enlace:
 
