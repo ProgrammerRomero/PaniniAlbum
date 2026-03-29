@@ -839,19 +839,17 @@ def send_password_reset_email(to_email: str, token: str):
         from flask_mail import Mail
         mail = Mail(current_app)
 
-        msg = Message(
-            "Recuperación de contraseña - Panini Album",
-            recipients=[to_email],
-            body=f"""Para restablecer tu contraseña, haz clic en el siguiente enlace:
+        msg = Message("Recuperación de contraseña - Panini Album")
+        msg.recipients = [to_email]
+        msg.body = f"""Para restablecer tu contraseña, haz clic en el siguiente enlace:
 
 {reset_url}
 
 Este enlace expirará en 1 hora.
 
 Si no solicitaste este cambio, ignora este correo.
-""",
-            html=render_template("emails/reset_password.html", reset_url=reset_url),
-        )
+"""
+        msg.html = render_template("emails/reset_password.html", reset_url=reset_url)
         mail.send(msg)
 
 
