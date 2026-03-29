@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask
 from flask_login import LoginManager
 from flask_mail import Mail
@@ -32,27 +34,41 @@ def create_app() -> Flask:
     # =========================================================================
 
     # Secret key for sessions and CSRF protection
-    # IMPORTANT: Change this to a random secure value in production!
-    app.config["SECRET_KEY"] = "dev-panini-album-change-me"
+    # Use environment variable in production, fallback for development
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-panini-album-change-me")
 
-    # Database configuration (SQLite for simplicity)
-    # Uses instance folder for database persistence
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///album.db"
+    # Database configuration
+    # Use PostgreSQL from environment variable in production, SQLite locally
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        # Railway uses postgres:// but SQLAlchemy requires postgresql://
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    else:
+        # SQLite for local development
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///album.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Mail configuration
-    # For development: emails print to console
-    # For production: configure with real SMTP server (see EMAIL_CONFIG.md)
-    app.config["MAIL_SUPPRESS_SEND"] = True  # Set to False to actually send emails
-    app.config["MAIL_DEFAULT_SENDER"] = ("Panini Album", "noreply@paninialbum.local")
-
-    # SMTP Settings (only used when MAIL_SUPPRESS_SEND = False)
-    # Uncomment and fill in for your email provider:
-    # app.config["MAIL_SERVER"] = "smtp.gmail.com"      # or smtp.sendgrid.net
-    # app.config["MAIL_PORT"] = 587
-    # app.config["MAIL_USE_TLS"] = True
-    # app.config["MAIL_USERNAME"] = "your-email@gmail.com"
-    # app.config["MAIL_PASSWORD"] = "your-app-password"  # NOT your regular password!
+    # Check if email is configured via environment variables
+    mail_server = os.environ.get("MAIL_SERVER")
+    if mail_server:
+        # Production: Use real SMTP server
+        app.config["MAIL_SUPPRESS_SEND"] = False
+        app.config["MAIL_SERVER"] = mail_server
+        app.config["MAIL_PORT"] = int(os.environ.get("MAIL_PORT", 587))
+        app.config["MAIL_USE_TLS"] = os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
+        app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
+        app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+        app.config["MAIL_DEFAULT_SENDER"] = (
+            "Panini Album",
+            os.environ.get("MAIL_DEFAULT_SENDER", os.environ.get("MAIL_USERNAME"))
+        )
+    else:
+        # Development: emails print to console
+        app.config["MAIL_SUPPRESS_SEND"] = True
+        app.config["MAIL_DEFAULT_SENDER"] = ("Panini Album", "noreply@paninialbum.local")
 
     # =========================================================================
     # INITIALIZE EXTENSIONS
