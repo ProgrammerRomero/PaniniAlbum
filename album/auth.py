@@ -26,7 +26,7 @@ from flask_login import (
     login_required,
     current_user,
 )
-from flask_mail import Message, Mail
+from flask_mail import Message as MailMessage, Mail
 
 from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation, COUNTRIES, COUNTRY_CODES
 from .utils import validate_email
@@ -192,26 +192,34 @@ def forgot_password():
     - Token expires after 1 hour
     - Console output in development mode (no real email sent)
     """
+    print("\n\n=== FORGOT PASSWORD ROUTE ACCESSED ===", flush=True)
+    print(f"Request method: {request.method}", flush=True)
+
     if current_user.is_authenticated:
+        print("User already authenticated, redirecting...", flush=True)
         return redirect(url_for("album.index"))
 
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
+        print(f"DEBUG: Forgot password requested for email: {email}")  # DEBUG LINE
 
         if not email:
             flash("Por favor ingresa tu correo electrónico.", "error")
             return render_template("auth/forgot_password.html"), 400
 
         user = User.query.filter_by(email=email).first()
+        print(f"DEBUG: User found: {user is not None}")  # DEBUG LINE
 
         if user:
             # Generate reset token
             token = PasswordResetToken(user_id=user.id)
             db.session.add(token)
             db.session.commit()
+            print(f"DEBUG: Token created, calling send_password_reset_email")  # DEBUG LINE
 
             # Send email
             send_password_reset_email(user.email, token.token)
+            print(f"DEBUG: Email function completed")  # DEBUG LINE
 
         # Always show success (prevents email enumeration)
         flash(
@@ -819,6 +827,10 @@ def send_password_reset_email(to_email: str, token: str):
         to_email: Recipient email address
         token: Reset token to include in the link
     """
+    print(f"\n>>> send_password_reset_email called with: {to_email}", flush=True)
+    print(f"MAIL_SUPPRESS_SEND: {current_app.config.get('MAIL_SUPPRESS_SEND')}", flush=True)
+    print(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}", flush=True)
+
     reset_url = url_for("auth.reset_password", token=token, _external=True)
 
     if current_app.config.get("MAIL_SUPPRESS_SEND"):
@@ -834,14 +846,14 @@ def send_password_reset_email(to_email: str, token: str):
         print("-" * 60)
         print(f"Este enlace expirará en 1 hora.")
         print("=" * 60)
-    else:
+    elif current_app.config.get("MAIL_SERVER"):
         # Production mode: send actual email
-        from flask_mail import Mail
-        mail = Mail(current_app)
-
-        msg = Message("Recuperación de contraseña - Panini Album")
-        msg.recipients = [to_email]
-        msg.body = f"""Para restablecer tu contraseña, haz clic en el siguiente enlace:
+        try:
+            from flask_mail import Mail
+            mail = Mail(current_app)
+            msg = MailMessage("Recuperación de contraseña - Panini Album")
+            msg.recipients = [to_email]
+            msg.body = f"""Para restablecer tu contraseña, haz clic en el siguiente enlace:
 
 {reset_url}
 
@@ -849,8 +861,19 @@ Este enlace expirará en 1 hora.
 
 Si no solicitaste este cambio, ignora este correo.
 """
-        msg.html = render_template("emails/reset_password.html", reset_url=reset_url)
-        mail.send(msg)
+            msg.html = render_template("emails/reset_password.html", reset_url=reset_url)
+            mail.send(msg)
+        except Exception as e:
+            print(f"ERROR: Failed to send email: {e}")
+            # Still show the link in console as fallback
+            print(f"\nPassword reset link for {to_email}:")
+            print(f"{reset_url}")
+    else:
+        # Email not configured - just print to console
+        print("=" * 60)
+        print(f"EMAIL NOT CONFIGURED - Password reset for: {to_email}")
+        print(f"Reset URL: {reset_url}")
+        print("=" * 60)
 
 
 # =============================================================================
