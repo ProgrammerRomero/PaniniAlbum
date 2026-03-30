@@ -54,6 +54,11 @@ def create_app() -> Flask:
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///album.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+    # Create upload directory for user photos (Railway compatible)
+    upload_folder = os.path.join(app.root_path, 'static', 'uploads', 'photos')
+    os.makedirs(upload_folder, exist_ok=True)
+    app.config["UPLOAD_FOLDER"] = upload_folder
+
     # Mail configuration
     # Check if email is configured via environment variables
     mail_server = os.environ.get("MAIL_SERVER")
