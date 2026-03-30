@@ -192,10 +192,11 @@ def forgot_password():
     - Token expires after 1 hour
     - Console output in development mode (no real email sent)
     """
-    # Debug logging to file since console isn't visible
-    with open('forgot_password_debug.log', 'a') as f:
-        f.write(f"\n=== FORGOT PASSWORD ACCESSED ===\n")
-        f.write(f"Request method: {request.method}\n")
+    # Debug logging to console (visible in Railway) and file
+    import sys
+    print("=== FORGOT PASSWORD ACCESSED ===", flush=True)
+    print(f"Request method: {request.method}", flush=True)
+    sys.stdout.flush()
 
     if current_user.is_authenticated:
         return redirect(url_for("album.index"))
@@ -203,8 +204,8 @@ def forgot_password():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
 
-        with open('forgot_password_debug.log', 'a') as f:
-            f.write(f"Email submitted: {email}\n")
+        print(f"Email submitted: {email}", flush=True)
+        sys.stdout.flush()
 
         if not email:
             flash("Please enter your email address.", "error")
@@ -212,8 +213,8 @@ def forgot_password():
 
         user = User.query.filter_by(email=email).first()
 
-        with open('forgot_password_debug.log', 'a') as f:
-            f.write(f"User found: {user is not None}\n")
+        print(f"User found: {user is not None}", flush=True)
+        sys.stdout.flush()
 
         if user:
             # Generate reset token
@@ -221,15 +222,14 @@ def forgot_password():
             db.session.add(token)
             db.session.commit()
 
-            with open('forgot_password_debug.log', 'a') as f:
-                f.write(f"Token created, calling send_password_reset_email\n")
+            print(f"Token created: {token.token}", flush=True)
+            sys.stdout.flush()
 
             # Send email
             send_password_reset_email(user.email, token.token)
 
-            with open('forgot_password_debug.log', 'a') as f:
-                f.write(f"Email function completed\n")
-                f.write(f"=== END ===\n\n")
+            print("Email function completed", flush=True)
+            sys.stdout.flush()
 
         # Always show success (prevents email enumeration)
         flash(
@@ -884,11 +884,13 @@ If you didn't request this change, please ignore this email.
             print(f"\nPassword reset link for {to_email}:")
             print(f"{reset_url}")
     else:
-        # Email not configured - just print to console
-        print("=" * 60)
-        print(f"EMAIL NOT CONFIGURED - Password reset for: {to_email}")
-        print(f"Reset URL: {reset_url}")
-        print("=" * 60)
+        # Email not configured - just print to console (Railway visible)
+        import sys
+        print("=" * 60, flush=True)
+        print(f"EMAIL NOT CONFIGURED - Password reset for: {to_email}", flush=True)
+        print(f"Reset URL: {reset_url}", flush=True)
+        print("=" * 60, flush=True)
+        sys.stdout.flush()
 
 
 # =============================================================================
