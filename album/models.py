@@ -200,7 +200,12 @@ class PasswordResetToken(db.Model):
         """
         if self.used:
             return False
-        return datetime.now(timezone.utc) < self.expires_at
+        # Handle timezone-aware vs naive datetime comparison
+        now = datetime.now(timezone.utc)
+        if self.expires_at.tzinfo is None:
+            # expires_at is naive, compare with naive now
+            return now.replace(tzinfo=None) < self.expires_at
+        return now < self.expires_at
 
     def mark_as_used(self):
         """Mark token as used after successful password reset."""
