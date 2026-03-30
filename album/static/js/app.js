@@ -906,9 +906,9 @@
     // ALWAYS initialize user dropdown (works on all pages including profile)
     initUserDropdown();
 
-    // Logo click - go to cover page (works on all pages)
+    // Logo click - go to cover page (not on login/register pages)
     const logoHomeLink = document.getElementById("logoHomeLink");
-    if (logoHomeLink) {
+    if (logoHomeLink && logoHomeLink.tagName === "A") {
       logoHomeLink.addEventListener("click", (event) => {
         event.preventDefault();
         // Only navigate if we have the album pages loaded
