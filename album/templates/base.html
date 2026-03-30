@@ -19,7 +19,7 @@
           Clicking the logo returns to the first page (FIFA World Cup 2026 cover)
           Disabled on login page - no link
         -->
-        {% if request.endpoint in ('auth.login', 'auth.register') %}
+        {% if request.endpoint in ('auth.login', 'auth.register', 'auth.forgot_password', 'auth.reset_password') %}
         <span class="navbar-logo" id="logoHomeLink" style="cursor: default;">
           <span class="logo-mark">⚽</span>
           <span class="logo-text">Panini Album 2026 - JULIAN ROMERO</span>
@@ -33,7 +33,7 @@
       </div>
 
       <div class="navbar-center">
-        {% if request.endpoint not in ('auth.login', 'auth.register') %}
+        {% if request.endpoint not in ('auth.login', 'auth.register', 'auth.forgot_password', 'auth.reset_password') %}
         <!-- Teams dropdown – populated from Flask context -->
         <div class="dropdown" id="teamsDropdown">
           <button class="dropdown-toggle" type="button">
