@@ -96,7 +96,7 @@ body: JSON.stringify({
 
 1. **JavaScript at top**: Script block must be at line ~7, before HTML with onclick handlers
 2. **Three interconnected features**:
-   - Search filtering (by username or sticker ID)
+   - Search filtering (by username or sticker ID with partial matching, e.g., "bra" matches "brazil" or "bra-17")
    - Card expansion (click trader card → show modal)
    - Trade modal (click "You Can Get/Give" → select stickers → send message)
 

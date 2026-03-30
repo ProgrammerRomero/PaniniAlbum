@@ -45,7 +45,8 @@
         if (!userData) return;
 
         const usernameMatch = userData.username.toLowerCase().includes(normalizedQuery);
-        const stickerMatch = userData.canReceive.some(s => s.toLowerCase() === normalizedQuery);
+        // Check if any sticker ID contains the search query (partial match)
+        const stickerMatch = userData.canReceive.some(s => s.toLowerCase().includes(normalizedQuery));
 
         if (usernameMatch || stickerMatch) {
           card.style.display = 'flex';
@@ -696,10 +697,16 @@
     margin: 0 auto;
   }
 
-  /* Header - Compact */
+  /* Header - Compact with Sticky Search */
   .users-header {
     text-align: center;
     margin-bottom: 1rem;
+    position: sticky;
+    top: 60px; /* Below navbar */
+    z-index: 90;
+    background: linear-gradient(180deg, #0b1120 0%, rgba(11, 17, 32, 0.98) 100%);
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
   }
 
   .users-title {
