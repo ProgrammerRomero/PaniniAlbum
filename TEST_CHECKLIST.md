@@ -33,8 +33,10 @@
 
 ### Other Users Page (CRITICAL - frequently breaks)
 - [ ] Page loads without JavaScript errors
-- [ ] Search by username works
-- [ ] Search by sticker ID works
+- [ ] Search by username works (partial match, e.g., "jo" finds "john")
+- [ ] Search by sticker ID works (partial match, e.g., "bra" finds "bra-17")
+- [ ] Search bar stays sticky at top when scrolling
+- [ ] Clear search button (✕) works
 - [ ] Click trader card opens modal with blurred backdrop
 - [ ] Click "You Can Get" opens trade modal
 - [ ] Click "You Can Give" opens trade modal
