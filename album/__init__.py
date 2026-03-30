@@ -62,7 +62,9 @@ def create_app() -> Flask:
     # Mail configuration
     # Check if email is configured via environment variables
     mail_server = os.environ.get("MAIL_SERVER")
-    if mail_server:
+    mail_suppress = os.environ.get("MAIL_SUPPRESS_SEND", "true").lower() == "true"
+
+    if mail_server and not mail_suppress:
         # Production: Use real SMTP server
         app.config["MAIL_SUPPRESS_SEND"] = False
         app.config["MAIL_SERVER"] = mail_server
@@ -77,6 +79,7 @@ def create_app() -> Flask:
     else:
         # Development: emails print to console
         app.config["MAIL_SUPPRESS_SEND"] = True
+        app.config["MAIL_DEFAULT_SENDER"] = ("Panini Album", "noreply@paninialbum.local")
         app.config["MAIL_DEFAULT_SENDER"] = ("Panini Album", "noreply@paninialbum.local")
 
     # =========================================================================
