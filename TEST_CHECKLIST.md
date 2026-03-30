@@ -31,6 +31,11 @@
 - [ ] Progress bar updates
 - [ ] Stats modal shows correct data
 
+### Navigation (Navbar)
+- [ ] Teams dropdown shows above page content (not behind)
+- [ ] Export dropdown shows above page content
+- [ ] User dropdown shows above page content
+
 ### Other Users Page (CRITICAL - frequently breaks)
 - [ ] Page loads without JavaScript errors
 - [ ] Search by username works (partial match, e.g., "jo" finds "john")

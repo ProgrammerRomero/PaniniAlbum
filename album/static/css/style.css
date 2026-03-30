@@ -157,6 +157,7 @@ a:hover {
   box-shadow: var(--shadow-soft);
   padding: 0.35rem 0.4rem;
   display: none;
+  z-index: 100; /* Higher than users-header (z-index: 90) */
 }
 
 .dropdown.open .dropdown-menu {
