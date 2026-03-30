@@ -17,14 +17,23 @@
         <!--
           LOGO LINK TO HOME (Cover Page)
           Clicking the logo returns to the first page (FIFA World Cup 2026 cover)
+          Disabled on login page - no link
         -->
+        {% if request.endpoint in ('auth.login', 'auth.register') %}
+        <span class="navbar-logo" id="logoHomeLink" style="cursor: default;">
+          <span class="logo-mark">⚽</span>
+          <span class="logo-text">Panini Album 2026 - JULIAN ROMERO</span>
+        </span>
+        {% else %}
         <a href="#" class="navbar-logo" id="logoHomeLink" title="Ir a la página de inicio">
           <span class="logo-mark">⚽</span>
           <span class="logo-text">Panini Album 2026 - JULIAN ROMERO</span>
         </a>
+        {% endif %}
       </div>
 
       <div class="navbar-center">
+        {% if request.endpoint not in ('auth.login', 'auth.register') %}
         <!-- Teams dropdown – populated from Flask context -->
         <div class="dropdown" id="teamsDropdown">
           <button class="dropdown-toggle" type="button">
@@ -39,6 +48,7 @@
             {% endfor %}
           </div>
         </div>
+        {% endif %}
       </div>
 
       <div class="navbar-right">

@@ -35,6 +35,12 @@
 - [ ] Teams dropdown shows above page content (not behind)
 - [ ] Export dropdown shows above page content
 - [ ] User dropdown shows above page content
+- [ ] On login page: Teams dropdown is hidden
+- [ ] On login page: Logo is not clickable (no link)
+- [ ] On register page: Teams dropdown is hidden
+- [ ] On register page: Logo is not clickable (no link)
+- [ ] On other pages: Teams dropdown is visible
+- [ ] On other pages: Logo is clickable
 
 ### Other Users Page (CRITICAL - frequently breaks)
 - [ ] Page loads without JavaScript errors
