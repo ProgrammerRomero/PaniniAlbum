@@ -307,6 +307,12 @@
   function goToPageIndex(idx) {
     currentPageIndex = clampPageIndex(idx);
     updatePagePosition();
+
+    // Update URL hash to reflect current team page (for back button support)
+    const currentPage = pages[currentPageIndex];
+    if (currentPage && typeof window.updateHashForPage === 'function') {
+      window.updateHashForPage(currentPage.dataset.pageId);
+    }
   }
 
   function goToPageId(pageId) {
@@ -354,9 +360,10 @@
           console.log("Navigating directly to:", pageId);
           goToPageId(pageId);
         } else {
-          // Not on album page, redirect via query parameter
-          console.log("Redirecting to /?team=" + pageId);
-          window.location.href = "/?team=" + pageId;
+          // Not on album page, redirect via hash fragment for direct navigation
+          // This avoids the flash of cover page that happens with query parameters
+          console.log("Redirecting to /#team-" + pageId);
+          window.location.href = "/#team-" + pageId;
         }
       }
       closeDropdown();
@@ -979,7 +986,15 @@
     // Check for initial team from redirect BEFORE setting page position
     const initialTeamEl = document.getElementById("initialTeamData");
     let targetPageId = null;
-    if (initialTeamEl) {
+
+    // First check hash-based navigation (e.g., /#team-arg) - takes precedence
+    // This handles navigation from other pages via dropdown
+    const hash = window.location.hash;
+    if (hash && hash.startsWith("#team-")) {
+      targetPageId = hash.substring(6); // Remove "#team-" prefix
+      console.log("Initial team from hash:", targetPageId);
+    } else if (initialTeamEl) {
+      // Fall back to server-rendered initial team (legacy ?team= param)
       try {
         targetPageId = JSON.parse(initialTeamEl.textContent);
         console.log("Initial team from redirect:", targetPageId);
@@ -1001,8 +1016,14 @@
       } else {
         console.warn("Team page not found:", targetPageId);
       }
-      // Clean up the URL
-      history.replaceState(null, null, window.location.pathname);
+      // Clean up the URL - replace query params with hash if needed
+      if (hash && hash.startsWith("#team-")) {
+        // Keep the hash for back button support, just remove any query params
+        history.replaceState(null, null, window.location.pathname + hash);
+      } else {
+        // Legacy query param mode - clean up the URL
+        history.replaceState(null, null, window.location.pathname);
+      }
     }
 
     updatePagePosition();
@@ -1041,6 +1062,14 @@
         goToPageIndex(currentPageIndex - 1);
       } else if (event.key === "ArrowRight") {
         goToPageIndex(currentPageIndex + 1);
+      }
+    });
+
+    // Listen for hash navigation events from the inline hash handler
+    window.addEventListener('hashNavigation', (event) => {
+      if (event.detail && typeof event.detail.pageIndex === 'number') {
+        currentPageIndex = event.detail.pageIndex;
+        updatePagePosition();
       }
     });
   }

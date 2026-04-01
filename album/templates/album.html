@@ -390,6 +390,122 @@
 <script id="initialTeamData" type="application/json">"{{ initial_team }}"</script>
 {% endif %}
 
+<script>
+(function() {
+  /**
+   * HASH-BASED NAVIGATION FOR DIRECT TEAM LINKING
+   * =================================================
+   *
+   * This script handles URL hash fragments like "#team-arg" to enable
+   * direct navigation to specific team pages from any page in the app.
+   *
+   * When a user clicks a team from the dropdown on another page (e.g.,
+   * "Other Users"), they're redirected to "/#team-PAGE_ID" instead of
+   * "/?team=PAGE_ID". This hash is read on page load and navigation
+   * happens immediately without flashing the cover page.
+   *
+   * Features:
+   * - Reads hash on page load and navigates to team
+   * - Updates hash when user navigates between pages
+   * - Enables browser back/forward button support
+   * - Works alongside existing initial_team mechanism
+   */
+
+  // Wait for the album track to be available (indicates we're on the album page)
+  function initHashNavigation() {
+    const track = document.getElementById("albumTrack");
+    if (!track) return; // Not on album page
+
+    const pages = Array.from(document.querySelectorAll(".album-page"));
+    if (pages.length === 0) return;
+
+    // Parse hash like "#team-arg" or "#team-gen-1"
+    function getTeamFromHash() {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith("#team-")) {
+        return hash.substring(6); // Remove "#team-" prefix
+      }
+      return null;
+    }
+
+    // Update hash to reflect current page
+    function updateHashForPage(pageId) {
+      if (pageId && pageId !== "cover") {
+        const newHash = "#team-" + pageId;
+        if (window.location.hash !== newHash) {
+          history.replaceState(null, null, newHash);
+        }
+      } else if (pageId === "cover") {
+        // Remove hash when on cover page
+        if (window.location.hash) {
+          history.replaceState(null, null, window.location.pathname);
+        }
+      }
+    }
+
+    // Navigate to team from hash
+    function navigateToHashTeam() {
+      const teamPageId = getTeamFromHash();
+      if (!teamPageId) return;
+
+      const targetIndex = pages.findIndex((p) => p.dataset.pageId === teamPageId);
+      if (targetIndex >= 0) {
+        // Trigger navigation by updating the album state
+        // The app.js goToPageIndex function updates currentPageIndex
+        // We'll set it and trigger the position update
+        if (typeof currentPageIndex !== 'undefined') {
+          currentPageIndex = targetIndex;
+          // Dispatch a custom event that app.js can listen for
+          window.dispatchEvent(new CustomEvent('hashNavigation', {
+            detail: { pageIndex: targetIndex, pageId: teamPageId }
+          }));
+        }
+      }
+    }
+
+    // Listen for hash changes (back/forward buttons)
+    window.addEventListener('hashchange', function(event) {
+      const teamPageId = getTeamFromHash();
+      if (teamPageId) {
+        const targetIndex = pages.findIndex((p) => p.dataset.pageId === teamPageId);
+        if (targetIndex >= 0 && typeof currentPageIndex !== 'undefined') {
+          currentPageIndex = targetIndex;
+          window.dispatchEvent(new CustomEvent('hashNavigation', {
+            detail: { pageIndex: targetIndex, pageId: teamPageId }
+          }));
+        }
+      } else {
+        // No hash or hash removed - go to cover
+        if (typeof currentPageIndex !== 'undefined') {
+          currentPageIndex = 0;
+          window.dispatchEvent(new CustomEvent('hashNavigation', {
+            detail: { pageIndex: 0, pageId: 'cover' }
+          }));
+        }
+      }
+    });
+
+    // Navigate to hash team on initial load (after a brief delay to let app.js init)
+    const teamFromHash = getTeamFromHash();
+    if (teamFromHash) {
+      // Wait for app.js to initialize
+      setTimeout(navigateToHashTeam, 50);
+    }
+
+    // Expose updateHashForPage to global scope so app.js can call it
+    window.updateHashForPage = updateHashForPage;
+    window.getTeamFromHash = getTeamFromHash;
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initHashNavigation);
+  } else {
+    initHashNavigation();
+  }
+})();
+</script>
+
 <!-- Team Toggle Confirmation Modal -->
 <div id="teamConfirmModal" class="team-confirm-modal" style="display: none;">
   <div class="team-confirm-overlay" onclick="cancelTeamToggle()"></div>
