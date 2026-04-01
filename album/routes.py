@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from io import BytesIO
+from time import time
 from typing import List, Set
 
-from flask import Blueprint, jsonify, render_template, request, send_file
+from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
+from sqlalchemy import text
 
 from .config import ALBUM_PAGES, team_pages_by_code
 from .models import db, UserSticker
+
+# Start time for uptime tracking
+_start_time = time()
 
 bp = Blueprint("album", __name__)
 
@@ -406,4 +412,56 @@ def update_sticker_duplicate():
         "sticker_id": sticker_id,
         "duplicate_count": count,
     })
+
+
+# =============================================================================
+# HEALTH CHECK ENDPOINT (For Railway/Docker monitoring)
+# =============================================================================
+
+@bp.route("/health")
+def health_check():
+    """
+    Health check endpoint for Railway/Docker monitoring.
+
+    Returns:
+        JSON with status, timestamp, uptime, and database connectivity.
+    """
+    status = {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "uptime_seconds": int(time() - _start_time),
+        "service": "panini-album",
+        "version": "1.0.0",
+    }
+
+    # Check database connectivity
+    try:
+        db.session.execute(text("SELECT 1"))
+        status["database"] = "connected"
+    except Exception as e:
+        status["database"] = "disconnected"
+        status["database_error"] = str(e)
+        status["status"] = "unhealthy"
+        return jsonify(status), 503
+
+    # Memory usage (approximate)
+    import psutil
+    try:
+        process = psutil.Process()
+        mem_info = process.memory_info()
+        status["memory_mb"] = round(mem_info.rss / 1024 / 1024, 2)
+    except Exception:
+        status["memory_mb"] = None
+
+    return jsonify(status), 200
+
+
+@bp.route("/ready")
+def readiness_check():
+    """
+    Readiness check for Railway deployment.
+
+    Returns 200 when app is ready to receive traffic.
+    """
+    return jsonify({"ready": True}), 200
 

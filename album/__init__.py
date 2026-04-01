@@ -1,4 +1,6 @@
+import logging
 import os
+from logging.handlers import RotatingFileHandler
 
 from flask import Flask
 from flask_login import LoginManager
@@ -102,6 +104,22 @@ def create_app() -> Flask:
     # Initialize Flask-Mail
     mail = Mail()
     mail.init_app(app)
+
+    # =========================================================================
+    # LOGGING CONFIGURATION (for monitoring)
+    # =========================================================================
+
+    if not app.debug:
+        # Production logging
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        stream_handler.setFormatter(formatter)
+        app.logger.addHandler(stream_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info("Panini Album startup")
 
     # =========================================================================
     # USER LOADER (required by Flask-Login)
