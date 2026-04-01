@@ -1714,15 +1714,16 @@ a:hover {
    Modern Cover Page Styles
    ========================================================================== */
 
-/* Cover page container */
+/* Cover page container - FITS IN VIEWPORT */
 .cover-page {
   position: relative;
-  min-height: 100%;
+  height: calc(100vh - 60px); /* Account for header */
+  min-height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 2rem 1.5rem;
+  justify-content: flex-start;
+  padding: 0.75rem 1rem;
   overflow: hidden;
   background: radial-gradient(ellipse at 30% 20%, rgba(30, 41, 59, 0.8) 0%, transparent 50%),
               radial-gradient(ellipse at 70% 80%, rgba(56, 189, 248, 0.1) 0%, transparent 50%),
@@ -1750,14 +1751,14 @@ a:hover {
 .cover-gradient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(60px);
   pointer-events: none;
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .orb-1 {
-  width: 300px;
-  height: 300px;
+  width: 200px;
+  height: 200px;
   background: linear-gradient(135deg, #38bdf8, #0ea5e9);
   top: -100px;
   right: -50px;
@@ -1806,8 +1807,10 @@ a:hover {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 600px;
+  max-width: 500px;
+  width: 100%;
   animation: contentFadeIn 1s ease-out;
+  gap: 0.3rem;
 }
 
 @keyframes contentFadeIn {
@@ -1851,12 +1854,12 @@ a:hover {
 /* Logo/soccer ball section */
 .cover-logo-container {
   position: relative;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .cover-soccer-ball {
-  width: 120px;
-  height: 120px;
+  width: 70px;
+  height: 70px;
   position: relative;
   z-index: 2;
   animation: ballBounce 3s ease-in-out infinite;
@@ -1890,7 +1893,7 @@ a:hover {
 
 /* Title section */
 .cover-title-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .cover-main-title {
@@ -1902,16 +1905,16 @@ a:hover {
 }
 
 .cover-title-line {
-  font-size: clamp(1.2rem, 4vw, 1.8rem);
+  font-size: clamp(0.9rem, 3vw, 1.4rem);
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
   color: rgba(248, 250, 252, 0.9);
   text-shadow: 0 0 20px rgba(248, 250, 252, 0.2);
   animation: titleSlideIn 0.8s ease-out 0.3s both;
 }
 
 .cover-year {
-  font-size: clamp(4rem, 12vw, 7rem);
+  font-size: clamp(2rem, 8vw, 3.5rem);
   font-weight: 800;
   background: linear-gradient(135deg, #38bdf8, #5eead4, #818cf8);
   background-size: 200% 200%;
@@ -1957,8 +1960,8 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  margin: 1rem 0;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
   opacity: 0.6;
 }
 
@@ -1980,11 +1983,11 @@ a:hover {
 }
 
 .cover-subtitle {
-  font-size: clamp(1rem, 3vw, 1.4rem);
+  font-size: clamp(0.75rem, 2vw, 1rem);
   font-weight: 500;
   color: rgba(148, 163, 184, 0.9);
   margin: 0;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   animation: fadeInUp 0.6s ease-out 0.7s both;
 }
 
@@ -2001,11 +2004,11 @@ a:hover {
 
 /* Description */
 .cover-description {
-  font-size: clamp(0.9rem, 2.5vw, 1.05rem);
-  line-height: 1.7;
+  font-size: clamp(0.7rem, 2vw, 0.85rem);
+  line-height: 1.5;
   color: rgba(148, 163, 184, 0.85);
-  max-width: 480px;
-  margin: 0 0 2rem 0;
+  max-width: 400px;
+  margin: 0 0 0.75rem 0;
   animation: fadeInUp 0.6s ease-out 0.9s both;
 }
 
@@ -2014,16 +2017,16 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
   animation: fadeInUp 0.6s ease-out 1.1s both;
 }
 
 .cover-feature {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1rem;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
   background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.4));
   border: 1px solid rgba(56, 189, 248, 0.15);
   border-radius: 999px;
@@ -2037,8 +2040,8 @@ a:hover {
 }
 
 .cover-feature-icon {
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   color: #38bdf8;
 }
 
@@ -2048,21 +2051,21 @@ a:hover {
 }
 
 .cover-feature-text {
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   font-weight: 500;
   color: rgba(226, 232, 240, 0.9);
 }
 
 /* Call to action section */
 .cover-cta {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
   animation: fadeInUp 0.6s ease-out 1.3s both;
 }
 
 .cover-welcome {
-  font-size: 0.95rem;
+  font-size: 0.75rem;
   color: rgba(226, 232, 240, 0.8);
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.4rem 0;
 }
 
 .cover-arrow-hint {
@@ -2117,8 +2120,8 @@ a:hover {
 .cover-attribution {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding-top: 1.5rem;
+  gap: 0.3rem;
+  padding-top: 0.5rem;
   border-top: 1px solid rgba(148, 163, 184, 0.15);
   animation: fadeInUp 0.6s ease-out 1.5s both;
 }
