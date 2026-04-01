@@ -29,14 +29,23 @@
               {% endif %}
 
               <div class="team-meta">
+                <span class="team-code">{{ page.team_code }}</span>
                 {% if page.confederation %}
                 <span class="confederation-tag {{ page.confederation.lower() }}">{{ page.confederation }}</span>
                 {% endif %}
-                <span class="team-code">{{ page.team_code }}</span>
               </div>
             </div>
 
             {% if page.team_code %}
+            <!-- Group Badge in Center -->
+            {% set group_letter = 'ABCDEFGHIJKL'[((loop.index0 - 2) // 4)] if loop.index0 >= 2 else '' %}
+            {% if group_letter %}
+            <div class="group-badge">
+              <span class="group-label">GROUP</span>
+              <span class="group-letter">{{ group_letter }}</span>
+            </div>
+            {% endif %}
+
             <div class="team-completion-section">
               <label class="team-toggle-wrapper" title="Toggle all stickers for this team">
                 <input type="checkbox" class="team-toggle" data-team-code="{{ page.team_code }}"
