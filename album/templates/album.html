@@ -121,35 +121,87 @@
                 <div class="cover-soccer-ball">
                   <svg viewBox="0 0 200 200" class="soccer-ball-svg" aria-hidden="true">
                     <defs>
+                      <!-- 3D shading for the ball -->
                       <radialGradient id="ballGrad" cx="30%" cy="30%">
                         <stop offset="0%" stop-color="#ffffff" />
                         <stop offset="70%" stop-color="#f1f5f9" />
-                        <stop offset="100%" stop-color="#cbd5e1" />
+                        <stop offset="100%" stop-color="#94a3b8" />
                       </radialGradient>
+                      <!-- Shadow for black panels -->
+                      <filter id="panelShadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.4"/>
+                      </filter>
                     </defs>
-                    <!-- Ball base -->
-                    <circle cx="100" cy="100" r="95" fill="url(#ballGrad)" />
-                    <!-- Simple hexagon pattern lines -->
-                    <g stroke="#1e293b" stroke-width="1.8" fill="none" opacity="0.7">
-                      <!-- Central hexagon -->
-                      <polygon points="100,60 135,80 135,120 100,140 65,120 65,80" />
-                      <!-- Surrounding hexagons -->
-                      <polygon points="100,20 135,40 135,60 100,60 65,60 65,40" />
-                      <polygon points="135,80 170,60 170,100 135,120" />
-                      <polygon points="135,120 170,140 170,100" />
-                      <polygon points="100,140 135,160 100,180 65,160" />
-                      <polygon points="65,120 30,140 30,100 65,80" />
-                      <polygon points="65,80 30,60 30,100" />
-                      <!-- Connecting lines -->
-                      <line x1="100" y1="20" x2="100" y2="60" />
-                      <line x1="170" y1="60" x2="135" y2="80" />
-                      <line x1="170" y1="140" x2="135" y2="120" />
-                      <line x1="100" y1="180" x2="100" y2="140" />
-                      <line x1="30" y1="140" x2="65" y2="120" />
-                      <line x1="30" y1="60" x2="65" y2="80" />
+
+                    <!-- Ball base with 3D shading -->
+                    <circle cx="100" cy="100" r="98" fill="url(#ballGrad)" stroke="#64748b" stroke-width="0.5"/>
+
+                    <!-- Traditional Soccer Ball Pattern: 1 central black pentagon + 5 surrounding white hexagons -->
+                    <!-- Black pentagons (traditional soccer ball has 12 pentagons) -->
+                    <g filter="url(#panelShadow)">
+                      <!-- Central black pentagon (front center) -->
+                      <polygon points="100,55 116,66 110,90 90,90 84,66" fill="#1e293b" stroke="#0f172a" stroke-width="1"/>
+
+                      <!-- Surrounding black pentagons (partially visible on edges) -->
+                      <!-- Top pentagon -->
+                      <polygon points="100,25 112,32 108,45 92,45 88,32" fill="#1e293b"/>
+                      <!-- Top-right pentagon -->
+                      <polygon points="140,55 150,70 142,85 128,78 125,60" fill="#1e293b"/>
+                      <!-- Bottom-right pentagon -->
+                      <polygon points="128,120 138,140 125,155 115,140 118,125" fill="#1e293b"/>
+                      <!-- Bottom-left pentagon -->
+                      <polygon points="72,120 62,140 75,155 85,140 82,125" fill="#1e293b"/>
+                      <!-- Top-left pentagon -->
+                      <polygon points="60,55 50,70 58,85 72,78 75,60" fill="#1e293b"/>
                     </g>
-                    <!-- Highlight -->
-                    <ellipse cx="75" cy="65" rx="18" ry="14" fill="#ffffff" opacity="0.25" />
+
+                    <!-- White hexagons (traditional soccer ball has 20 hexagons) -->
+                    <!-- These are the white panels between and around the black pentagons -->
+                    <g stroke="#475569" stroke-width="1" fill="#ffffff">
+                      <!-- Top hexagon (between top and center pentagons) -->
+                      <polygon points="100,25 128,32 140,55 116,66 100,55 84,66 60,55 72,32" />
+
+                      <!-- Upper-right hexagon -->
+                      <polygon points="116,66 140,55 165,70 160,95 128,120 110,90" />
+
+                      <!-- Lower-right hexagon -->
+                      <polygon points="110,90 128,120 125,155 100,165 75,155 72,120 90,90" />
+
+                      <!-- Upper-left hexagon -->
+                      <polygon points="84,66 60,55 35,70 40,95 72,120 90,90" />
+
+                      <!-- Edge/outer hexagons (visible around the ball edges) -->
+                      <!-- Top edge -->
+                      <polygon points="72,32 100,15 128,32 100,25" fill="#f8fafc" />
+
+                      <!-- Right edge hexagons -->
+                      <polygon points="165,70 180,85 175,110 160,95 140,55" fill="#f8fafc" />
+                      <polygon points="160,95 175,110 170,140 138,140 128,120" fill="#f8fafc" />
+
+                      <!-- Bottom edge -->
+                      <polygon points="125,155 138,140 150,160 125,175 100,165" fill="#f8fafc" />
+                      <polygon points="75,155 62,140 50,160 75,175 100,165" fill="#f8fafc" />
+
+                      <!-- Left edge hexagons -->
+                      <polygon points="35,70 20,85 25,110 40,95 60,55" fill="#f8fafc" />
+                      <polygon points="40,95 25,110 30,140 62,140 72,120" fill="#f8fafc" />
+                    </g>
+
+                    <!-- Stitching/seam lines between panels -->
+                    <g stroke="#334155" stroke-width="0.8" fill="none" opacity="0.6">
+                      <!-- Lines from center pentagon to surrounding hexagons -->
+                      <line x1="100" y1="55" x2="100" y2="25" />
+                      <line x1="116" y1="66" x2="140" y2="55" />
+                      <line x1="110" y1="90" x2="128" y2="120" />
+                      <line x1="90" y1="90" x2="72" y2="120" />
+                      <line x1="84" y1="66" x2="60" y2="55" />
+                    </g>
+
+                    <!-- 3D highlight/shine effect -->
+                    <ellipse cx="70" cy="60" rx="22" ry="18" fill="#ffffff" opacity="0.35" />
+
+                    <!-- Shadow at bottom for depth -->
+                    <ellipse cx="100" cy="185" rx="50" ry="8" fill="#000000" opacity="0.15" />
                   </svg>
                 </div>
                 <div class="cover-logo-glow"></div>
