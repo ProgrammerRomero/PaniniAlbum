@@ -1028,6 +1028,20 @@
 
     updatePagePosition();
 
+    // Hide loading overlay after album is positioned
+    // Small delay ensures smooth transition for direct team navigation
+    const loadingOverlay = document.getElementById("albumLoadingOverlay");
+    if (loadingOverlay) {
+      setTimeout(() => {
+        loadingOverlay.classList.add("hidden");
+        // Remove from DOM after fade animation completes
+        setTimeout(() => {
+          loadingOverlay.style.display = "none";
+        }, 350);
+      }, targetPageId ? 300 : 100);
+      // Longer delay when navigating to specific team (300ms) vs normal load (100ms)
+    }
+
     // Event listeners
     document.addEventListener("change", handleCheckboxChange);
     document.addEventListener("change", handleTeamToggleChange);

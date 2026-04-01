@@ -4,6 +4,25 @@
 
 {% block content %}
 <section class="album-shell">
+  <!--
+    LOADING OVERLAY
+    Shows spinning soccer ball while album initializes.
+    Hidden automatically once JavaScript positions the album.
+    Prevents flash of cover page when navigating directly to a team.
+  -->
+  <div id="albumLoadingOverlay" class="album-loading-overlay">
+    <div class="album-loading-content">
+      <div class="album-loading-ball">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="45" fill="white" stroke="#1e293b" stroke-width="2"/>
+          <path d="M50 15 L55 35 L75 30 L60 45 L70 65 L50 50 L30 65 L40 45 L25 30 L45 35 Z" fill="#1e293b"/>
+          <path d="M50 15 L50 5 M75 30 L85 20 M70 65 L80 75 M30 65 L20 75 M25 30 L15 20" stroke="#1e293b" stroke-width="2" fill="none"/>
+        </svg>
+      </div>
+      <span class="album-loading-text">Loading...</span>
+    </div>
+  </div>
+
   <div class="album-book">
     <button class="page-arrow page-arrow-left" type="button" id="pageArrowLeft" aria-label="Previous page">
       ‹
