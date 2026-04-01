@@ -571,7 +571,7 @@
     }
 
     if (statsModal) {
-      statsModal.style.display = "block";
+      statsModal.style.display = "flex";
       requestAnimationFrame(() => {
         statsModal.classList.add("modal-open");
       });
