@@ -34,6 +34,10 @@ from .utils import validate_email
 # Create blueprint
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+# Support user configuration
+SUPPORT_USERNAME = "the_pibe_support"
+SUPPORT_EMAIL = "support@paninialbum.local"
+
 
 # =============================================================================
 # REGISTRATION
@@ -1201,3 +1205,130 @@ def confirm_trade():
         current_app.logger.error(f"Failed to confirm trade: {e}")
         return jsonify({"success": False, "error": "Failed to confirm trade"}), 500
 
+
+
+def get_or_create_support_user():
+    """
+    Get or create the support user account.
+
+    Returns:
+        User: The support user instance
+    """
+    # Check by username first
+    support_user = User.query.filter_by(username=SUPPORT_USERNAME).first()
+
+    if support_user:
+        return support_user
+
+    # Check if email already exists (maybe created manually)
+    support_user = User.query.filter_by(email=SUPPORT_EMAIL).first()
+
+    if support_user:
+        # Update the username to match expected
+        support_user.username = SUPPORT_USERNAME
+        db.session.commit()
+        current_app.logger.info(f"Updated existing support user: {SUPPORT_USERNAME}")
+        return support_user
+
+    # Create support user with a secure random password
+    import secrets
+    support_user = User(
+        username=SUPPORT_USERNAME,
+        email=SUPPORT_EMAIL,
+        password=secrets.token_urlsafe(32)  # Random secure password
+    )
+    db.session.add(support_user)
+    db.session.commit()
+    current_app.logger.info(f"Created support user: {SUPPORT_USERNAME}")
+    return support_user
+
+
+def get_support_categories():
+    """
+    Get list of support categories.
+
+    Returns:
+        list: Tuple of (value, label) for support categories
+    """
+    return [
+        ("", "Select a category"),
+        ("Bug Report", "Bug Report"),
+        ("Feature Request", "Feature Request"),
+        ("General Question", "General Question"),
+        ("Other", "Other")
+    ]
+
+
+@auth_bp.route("/contact-support", methods=["GET", "POST"])
+@login_required
+def contact_support():
+    """
+    Contact/Support page for logged-in users.
+
+    GET: Displays the contact form
+    POST: Processes the support request and sends a message to support
+
+    Support message format:
+        [CATEGORY] SUBJECT
+
+        Message content
+    """
+    # Get or create support user
+    support_user = get_or_create_support_user()
+
+    if request.method == "POST":
+        subject = request.form.get("subject", "").strip()
+        category = request.form.get("category", "").strip()
+        message_content = request.form.get("message", "").strip()
+
+        # Validation
+        errors = []
+        if not subject:
+            errors.append("Subject is required.")
+        if not category:
+            errors.append("Category is required.")
+        if not message_content:
+            errors.append("Message is required.")
+
+        if errors:
+            for error in errors:
+                flash(error, "error")
+            return render_template(
+                "auth/contact_support.html",
+                support_user=support_user,
+                categories=get_support_categories(),
+                form_data={"subject": subject, "category": category, "message": message_content}
+            ), 400
+
+        # Format message: [CATEGORY] SUBJECT\n\nMessage content
+        formatted_content = f"[{category}] {subject}\n\n{message_content}"
+
+        try:
+            # Create message to support user
+            message = Message(
+                sender_id=current_user.id,
+                recipient_id=support_user.id,
+                content=formatted_content
+            )
+            db.session.add(message)
+            db.session.commit()
+
+            flash("Your message has been sent to support. We'll get back to you soon!", "success")
+            return redirect(url_for("auth.messages_inbox"))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Failed to send support message: {e}")
+            flash("An error occurred while sending your message. Please try again.", "error")
+            return render_template(
+                "auth/contact_support.html",
+                support_user=support_user,
+                categories=get_support_categories(),
+                form_data={"subject": subject, "category": category, "message": message_content}
+            ), 500
+
+    return render_template(
+        "auth/contact_support.html",
+        support_user=support_user,
+        categories=get_support_categories()
+    )
