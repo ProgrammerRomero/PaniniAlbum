@@ -32,12 +32,13 @@ class PageDefinition(TypedDict):
 
     id: str  # used for navigation, must be unique, e.g. "cover", "team-arg"
     title: str
-    section: str  # used for grouping in navigation, e.g. "General", "Teams"
+    section: str  # used for grouping in navigation, e.g. "General", "Group A"
     team_code: str | None  # "ARG", "MEX", etc.; None for non-team pages
+    confederation: str | None  # "UEFA", "CONMEBOL", "CONCACAF", "CAF", "AFC", "OFC"
     stickers: List[StickerDefinition]
 
 
-def _team_page(team_code: str, team_name: str, sticker_numbers: range) -> PageDefinition:
+def _team_page(team_code: str, team_name: str, confederation: str, sticker_numbers: range) -> PageDefinition:
     """
     Helper to build a page definition for a team.
 
@@ -59,6 +60,7 @@ def _team_page(team_code: str, team_name: str, sticker_numbers: range) -> PageDe
         "title": team_name,
         "section": "Teams",
         "team_code": team_code,
+        "confederation": confederation,
         "stickers": stickers,
     }
 
@@ -153,87 +155,80 @@ def build_album_structure() -> List[PageDefinition]:
     )
 
     # =========================================================================
-    # UEFA - EUROPE (16 teams)
+    # WORLD CUP 2026 GROUPS (48 teams, 12 groups of 4)
     # =========================================================================
-    # European teams that qualified for the 2026 World Cup
-    pages.append(_team_page("FRA", "France", range(1, 21)))
-    pages.append(_team_page("GER", "Germany", range(1, 21)))
-    pages.append(_team_page("ESP", "Spain", range(1, 21)))
-    pages.append(_team_page("ENG", "England", range(1, 21)))
-    pages.append(_team_page("POR", "Portugal", range(1, 21)))
-    pages.append(_team_page("NED", "Netherlands", range(1, 21)))
-    pages.append(_team_page("ITA", "Italy", range(1, 21)))
-    pages.append(_team_page("BEL", "Belgium", range(1, 21)))
-    pages.append(_team_page("CRO", "Croatia", range(1, 21)))
-    pages.append(_team_page("DEN", "Denmark", range(1, 21)))
-    pages.append(_team_page("SRB", "Serbia", range(1, 21)))
-    pages.append(_team_page("SUI", "Switzerland", range(1, 21)))
-    pages.append(_team_page("POL", "Poland", range(1, 21)))
-    pages.append(_team_page("UKR", "Ukraine", range(1, 21)))
-    pages.append(_team_page("AUT", "Austria", range(1, 21)))
-    pages.append(_team_page("WAL", "Wales", range(1, 21)))
 
-    # =========================================================================
-    # CONMEBOL - SOUTH AMERICA (6 teams)
-    # =========================================================================
-    # South American teams (all 10 nations compete, 6+ qualify)
-    pages.append(_team_page("ARG", "Argentina", range(1, 21)))
-    pages.append(_team_page("BRA", "Brazil", range(1, 21)))
-    pages.append(_team_page("URU", "Uruguay", range(1, 21)))
-    pages.append(_team_page("COL", "Colombia", range(1, 21)))
-    pages.append(_team_page("ECU", "Ecuador", range(1, 21)))
-    pages.append(_team_page("PAR", "Paraguay", range(1, 21)))
+    # GROUP A
+    pages.append(_team_page("USA", "United States", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("SEN", "Senegal", "CAF", range(1, 21)))
+    pages.append(_team_page("AUT", "Austria", "UEFA", range(1, 21)))
+    pages.append(_team_page("NZL", "New Zealand", "OFC", range(1, 21)))
 
-    # =========================================================================
-    # CONCACAF - NORTH/CENTRAL AMERICA & CARIBBEAN (6 teams)
-    # =========================================================================
-    # Hosts USA, Canada, Mexico automatically qualify + 3 more spots
-    pages.append(_team_page("USA", "United States", range(1, 21)))
-    pages.append(_team_page("MEX", "Mexico", range(1, 21)))
-    pages.append(_team_page("CAN", "Canada", range(1, 21)))
-    pages.append(_team_page("CRC", "Costa Rica", range(1, 21)))
-    pages.append(_team_page("JAM", "Jamaica", range(1, 21)))
-    pages.append(_team_page("PAN", "Panama", range(1, 21)))
+    # GROUP B
+    pages.append(_team_page("ARG", "Argentina", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("CRC", "Costa Rica", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("UKR", "Ukraine", "UEFA", range(1, 21)))
+    pages.append(_team_page("IRQ", "Iraq", "AFC", range(1, 21)))
 
-    # =========================================================================
-    # CAF - AFRICA (9 teams)
-    # =========================================================================
-    # African teams with increased allocation for 48-team format
-    pages.append(_team_page("MAR", "Morocco", range(1, 21)))
-    pages.append(_team_page("SEN", "Senegal", range(1, 21)))
-    pages.append(_team_page("TUN", "Tunisia", range(1, 21)))
-    pages.append(_team_page("ALG", "Algeria", range(1, 21)))
-    pages.append(_team_page("EGY", "Egypt", range(1, 21)))
-    pages.append(_team_page("CMR", "Cameroon", range(1, 21)))
-    pages.append(_team_page("GHA", "Ghana", range(1, 21)))
-    pages.append(_team_page("NGA", "Nigeria", range(1, 21)))
-    pages.append(_team_page("CIV", "Ivory Coast", range(1, 21)))
+    # GROUP C
+    pages.append(_team_page("GER", "Germany", "UEFA", range(1, 21)))
+    pages.append(_team_page("ECU", "Ecuador", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("GHA", "Ghana", "CAF", range(1, 21)))
+    pages.append(_team_page("JPN", "Japan", "AFC", range(1, 21)))
 
-    # =========================================================================
-    # AFC - ASIA (8 teams)
-    # =========================================================================
-    # Asian teams with increased allocation for 48-team format
-    pages.append(_team_page("JPN", "Japan", range(1, 21)))
-    pages.append(_team_page("KOR", "South Korea", range(1, 21)))
-    pages.append(_team_page("IRN", "Iran", range(1, 21)))
-    pages.append(_team_page("AUS", "Australia", range(1, 21)))
-    pages.append(_team_page("QAT", "Qatar", range(1, 21)))
-    pages.append(_team_page("KSA", "Saudi Arabia", range(1, 21)))
-    pages.append(_team_page("UZB", "Uzbekistan", range(1, 21)))
-    pages.append(_team_page("IRQ", "Iraq", range(1, 21)))
+    # GROUP D
+    pages.append(_team_page("BRA", "Brazil", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("CMR", "Cameroon", "CAF", range(1, 21)))
+    pages.append(_team_page("DEN", "Denmark", "UEFA", range(1, 21)))
+    pages.append(_team_page("QAT", "Qatar", "AFC", range(1, 21)))
 
-    # =========================================================================
-    # OFC - OCEANIA (2 teams)
-    # =========================================================================
-    # Oceania gets 2 guaranteed spots (previously had to playoff)
-    pages.append(_team_page("NZL", "New Zealand", range(1, 21)))
-    pages.append(_team_page("TAH", "Tahiti", range(1, 21)))
+    # GROUP E
+    pages.append(_team_page("MEX", "Mexico", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("URU", "Uruguay", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("SRB", "Serbia", "UEFA", range(1, 21)))
+    pages.append(_team_page("UZB", "Uzbekistan", "AFC", range(1, 21)))
 
-    # =========================================================================
-    # INTERCONTINENTAL PLAYOFFS (1 spot)
-    # =========================================================================
-    # Additional spot from playoff tournaments
-    pages.append(_team_page("UAE", "United Arab Emirates", range(1, 21)))
+    # GROUP F
+    pages.append(_team_page("ENG", "England", "UEFA", range(1, 21)))
+    pages.append(_team_page("TUN", "Tunisia", "CAF", range(1, 21)))
+    pages.append(_team_page("JAM", "Jamaica", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("KOR", "South Korea", "AFC", range(1, 21)))
+
+    # GROUP G
+    pages.append(_team_page("ESP", "Spain", "UEFA", range(1, 21)))
+    pages.append(_team_page("COL", "Colombia", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("EGY", "Egypt", "CAF", range(1, 21)))
+    pages.append(_team_page("CAN", "Canada", "CONCACAF", range(1, 21)))
+
+    # GROUP H
+    pages.append(_team_page("FRA", "France", "UEFA", range(1, 21)))
+    pages.append(_team_page("PAR", "Paraguay", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("CIV", "Ivory Coast", "CAF", range(1, 21)))
+    pages.append(_team_page("UAE", "United Arab Emirates", "AFC", range(1, 21)))
+
+    # GROUP I
+    pages.append(_team_page("NED", "Netherlands", "UEFA", range(1, 21)))
+    pages.append(_team_page("MAR", "Morocco", "CAF", range(1, 21)))
+    pages.append(_team_page("IRN", "Iran", "AFC", range(1, 21)))
+    pages.append(_team_page("PAN", "Panama", "CONCACAF", range(1, 21)))
+
+    # GROUP J
+    pages.append(_team_page("POR", "Portugal", "UEFA", range(1, 21)))
+    pages.append(_team_page("NGA", "Nigeria", "CAF", range(1, 21)))
+    pages.append(_team_page("AUS", "Australia", "AFC", range(1, 21)))
+    pages.append(_team_page("BIH", "Bosnia and Herzegovina", "UEFA", range(1, 21)))
+
+    # GROUP K
+    pages.append(_team_page("BEL", "Belgium", "UEFA", range(1, 21)))
+    pages.append(_team_page("ALG", "Algeria", "CAF", range(1, 21)))
+    pages.append(_team_page("KSA", "Saudi Arabia", "AFC", range(1, 21)))
+    pages.append(_team_page("WAL", "Wales", "UEFA", range(1, 21)))
+
+    # GROUP L
+    pages.append(_team_page("CRO", "Croatia", "UEFA", range(1, 21)))
+    pages.append(_team_page("POL", "Poland", "UEFA", range(1, 21)))
+    pages.append(_team_page("SUI", "Switzerland", "UEFA", range(1, 21)))
+    pages.append(_team_page("KEN", "Kenya", "CAF", range(1, 21)))
 
     return pages
 

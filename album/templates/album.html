@@ -28,12 +28,12 @@
               </div>
               {% endif %}
 
-              <p class="album-page-subtitle">
-                {{ page.section }}
-                {% if page.team_code %}
-                · {{ page.team_code }}
+              <div class="team-meta">
+                {% if page.confederation %}
+                <span class="confederation-tag {{ page.confederation.lower() }}">{{ page.confederation }}</span>
                 {% endif %}
-              </p>
+                <span class="team-code">{{ page.team_code }}</span>
+              </div>
             </div>
 
             {% if page.team_code %}
