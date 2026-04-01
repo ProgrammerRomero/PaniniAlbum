@@ -177,6 +177,31 @@
   }
 
   /**
+   * Save ownership status for multiple stickers in one request (batch).
+   */
+  async function saveOwnershipBatch(stickerIds, isOwned) {
+    if (isLoggedIn) {
+      try {
+        await fetch("/api/sticker/own-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sticker_ids: stickerIds, is_owned: isOwned }),
+        });
+      } catch (e) {
+        console.warn("Failed to save batch to API:", e);
+      }
+    } else {
+      // Save all at once to localStorage
+      try {
+        const arr = Array.from(ownedIds);
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+      } catch (e) {
+        console.warn("Failed to save to localStorage:", e);
+      }
+    }
+  }
+
+  /**
    * Save duplicate count to appropriate storage.
    */
   async function saveDuplicate(stickerId, count) {
@@ -765,22 +790,21 @@
       }
 
       if (isChecked) {
-        // Mark all stickers as owned
+        // Mark all stickers as owned - batch update
         for (const stickerId of stickerIds) {
           ownedIds.add(stickerId);
-          await saveOwnership(stickerId, true);
         }
+        await saveOwnershipBatch(stickerIds, true);
       } else {
-        // Remove all stickers from owned
+        // Remove all stickers from owned - batch update
         for (const stickerId of stickerIds) {
           ownedIds.delete(stickerId);
           // Clear duplicates when unmarking
           if (duplicatesData[stickerId]) {
             delete duplicatesData[stickerId];
-            await saveDuplicate(stickerId, 0);
           }
-          await saveOwnership(stickerId, false);
         }
+        await saveOwnershipBatch(stickerIds, false);
       }
 
       // Sync UI

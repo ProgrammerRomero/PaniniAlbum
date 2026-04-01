@@ -307,6 +307,55 @@ def update_sticker_ownership():
     })
 
 
+@bp.route("/api/sticker/own-batch", methods=["POST"])
+@login_required
+def update_sticker_ownership_batch():
+    """
+    Update ownership status of multiple stickers in one request.
+
+    Request body:
+        - sticker_ids: List of sticker IDs (e.g., ["ARG-1", "ARG-2"])
+        - is_owned: Boolean indicating if user owns them
+
+    Saves to database for persistent storage.
+    """
+    data = request.get_json(silent=True) or {}
+    sticker_ids = data.get("sticker_ids", [])
+    is_owned = bool(data.get("is_owned", False))
+
+    if not sticker_ids or not isinstance(sticker_ids, list):
+        return jsonify({"error": "sticker_ids array is required"}), 400
+
+    # Process all stickers in a single transaction
+    for sticker_id in sticker_ids:
+        user_sticker = UserSticker.query.filter_by(
+            user_id=current_user.id,
+            sticker_id=sticker_id
+        ).first()
+
+        if user_sticker:
+            user_sticker.is_owned = is_owned
+            # If unmarking as owned, clear duplicates too
+            if not is_owned:
+                user_sticker.duplicate_count = 0
+        else:
+            user_sticker = UserSticker(
+                user_id=current_user.id,
+                sticker_id=sticker_id,
+                is_owned=is_owned,
+                duplicate_count=0,
+            )
+            db.session.add(user_sticker)
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "updated_count": len(sticker_ids),
+        "is_owned": is_owned,
+    })
+
+
 @bp.route("/api/sticker/duplicate", methods=["POST"])
 @login_required
 def update_sticker_duplicate():
