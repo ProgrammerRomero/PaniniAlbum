@@ -114,37 +114,64 @@
 
             <!-- Main content -->
             <div class="cover-content">
-              <!-- FIFA Badge -->
-              <div class="cover-badge">
-                <span class="cover-badge-text">OFFICIAL</span>
-              </div>
-
               <!-- Logo/Soccer ball animation -->
               <div class="cover-logo-container">
                 <div class="cover-soccer-ball">
-                  <svg viewBox="0 0 100 100" class="soccer-ball-svg" aria-hidden="true">
+                  <svg viewBox="0 0 200 200" class="soccer-ball-svg" aria-hidden="true">
                     <defs>
                       <radialGradient id="ballGrad" cx="30%" cy="30%">
-                        <stop offset="0%" stop-color="#5eead4" />
-                        <stop offset="100%" stop-color="#0ea5e9" />
+                        <stop offset="0%" stop-color="#ffffff" />
+                        <stop offset="100%" stop-color="#e2e8f0" />
                       </radialGradient>
+                      <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="2" dy="4" stdDeviation="3" flood-opacity="0.3"/>
+                      </filter>
                     </defs>
-                    <!-- Ball base -->
-                    <circle cx="50" cy="50" r="45" fill="url(#ballGrad)" />
-                    <!-- Pentagon patterns -->
-                    <polygon points="50,15 63,28 57,48 43,48 37,28" fill="#0f172a" opacity="0.9"/>
-                    <polygon points="15,50 28,37 48,43 48,57 28,63" fill="#0f172a" opacity="0.9"/>
-                    <polygon points="85,50 72,63 52,57 52,43 72,37" fill="#0f172a" opacity="0.9"/>
-                    <polygon points="30,75 37,72 43,57 37,48 22,55" fill="#0f172a" opacity="0.7"/>
-                    <polygon points="70,75 78,55 63,48 57,57 63,72" fill="#0f172a" opacity="0.7"/>
-                    <polygon points="50,85 57,72 50,57 43,72" fill="#0f172a" opacity="0.7"/>
-                    <!-- Connecting lines -->
-                    <line x1="50" y1="15" x2="28" y2="37" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
-                    <line x1="63" y1="28" x2="72" y2="37" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
-                    <line x1="15" y1="50" x2="22" y2="55" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
-                    <line x1="85" y1="50" x2="78" y2="55" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
-                    <line x1="30" y1="75" x2="43" y2="72" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
-                    <line x1="70" y1="75" x2="57" y2="72" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
+                    <!-- Ball base with realistic shading -->
+                    <circle cx="100" cy="100" r="90" fill="url(#ballGrad)" />
+                    <!-- Shadow for depth -->
+                    <circle cx="100" cy="100" r="88" fill="none" stroke="#0f172a" stroke-width="1" opacity="0.1"/>
+
+                    <!-- Center Pentagon (black) -->
+                    <polygon points="100,45 131,67 119,105 81,105 69,67" fill="#0f172a" filter="url(#shadow)"/>
+
+                    <!-- Surrounding white hexagons connected to center pentagon -->
+                    <!-- Top hexagon -->
+                    <polygon points="100,25 126,15 146,32 141,60 100,45 59,60 54,32 74,15" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+                    <!-- Top-right hexagon -->
+                    <polygon points="131,67 160,55 180,75 175,105 141,60" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+                    <!-- Bottom-right hexagon -->
+                    <polygon points="119,105 155,115 165,150 135,165 100,145" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+                    <!-- Bottom hexagon -->
+                    <polygon points="81,105 100,145 65,165 35,150 45,115" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+                    <!-- Bottom-left hexagon -->
+                    <polygon points="69,67 59,60 25,75 20,105 45,115 81,105" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+
+                    <!-- Outer pentagons (black) -->
+                    <!-- Top outer -->
+                    <polygon points="100,5 115,18 100,25 85,18" fill="#0f172a"/>
+                    <!-- Right outer -->
+                    <polygon points="180,35 175,55 160,55 170,30" fill="#0f172a"/>
+                    <!-- Bottom-right outer -->
+                    <polygon points="175,130 165,150 155,115 165,115" fill="#0f172a"/>
+                    <!-- Bottom-left outer -->
+                    <polygon points="25,130 35,115 45,115 35,150" fill="#0f172a"/>
+                    <!-- Left outer -->
+                    <polygon points="20,35 30,30 40,55 25,55" fill="#0f172a"/>
+
+                    <!-- Additional white hexagons around the outside -->
+                    <polygon points="100,5 126,15 100,25 74,15" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+                    <polygon points="126,15 160,20 170,30 160,55 131,67 100,45" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+                    <polygon points="160,55 185,70 180,105 175,105 141,60" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+                    <polygon points="175,105 180,130 165,150 155,115" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+                    <polygon points="155,115 165,150 145,175 135,165" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+                    <polygon points="45,115 35,150 55,175 65,165 100,145" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+                    <polygon points="20,105 25,75 20,40 45,55 69,67 59,60 54,32 40,55" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+
+                    <!-- Outermost black pentagons -->
+                    <polygon points="100,195 115,180 100,175 85,180" fill="#0f172a"/>
+                    <polygon points="195,100 185,85 180,95 185,110" fill="#0f172a"/>
+                    <polygon points="5,100 15,85 20,95 15,110" fill="#0f172a"/>
                   </svg>
                 </div>
                 <div class="cover-logo-glow"></div>
@@ -216,11 +243,6 @@
                 </div>
               </div>
 
-              <!-- Attribution -->
-              <div class="cover-attribution">
-                <span class="cover-by">BY</span>
-                <span class="cover-author">JULIAN ROMERO</span>
-              </div>
             </div>
           </div>
           {% endif %}

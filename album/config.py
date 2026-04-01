@@ -120,7 +120,7 @@ def build_album_structure() -> List[PageDefinition]:
     pages.append(
         {
             "id": "cover",
-            "title": "FIFA World Cup 2026 – Sticker Album BY JULIAN ROMERO",
+            "title": "FIFA World Cup 2026",
             "section": "General",
             "team_code": None,
             "stickers": [],
