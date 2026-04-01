@@ -104,20 +104,124 @@
             {% endfor %}
           </div>
           {% else %}
-          <div class="page-intro">
-            <p>
-              Welcome to your digital companion for the
-              <strong>FIFA World Cup 2026</strong> sticker album.
-            </p>
-            <p>
-              Use the <strong>left / right arrows</strong> to flip through pages,
-              tick the stickers you already own, and generate an
-              <strong>Excel list</strong> of the ones you are still missing.
-            </p>
-            <p>
-              Open the <strong>Teams</strong> menu in the navigation bar to jump
-              directly to any national team.
-            </p>
+          <!-- Modern Cover Page -->
+          <div class="cover-page">
+            <!-- Decorative elements -->
+            <div class="cover-bg-pattern"></div>
+            <div class="cover-gradient-orb orb-1"></div>
+            <div class="cover-gradient-orb orb-2"></div>
+            <div class="cover-gradient-orb orb-3"></div>
+
+            <!-- Main content -->
+            <div class="cover-content">
+              <!-- FIFA Badge -->
+              <div class="cover-badge">
+                <span class="cover-badge-text">OFFICIAL</span>
+              </div>
+
+              <!-- Logo/Soccer ball animation -->
+              <div class="cover-logo-container">
+                <div class="cover-soccer-ball">
+                  <svg viewBox="0 0 100 100" class="soccer-ball-svg" aria-hidden="true">
+                    <defs>
+                      <radialGradient id="ballGrad" cx="30%" cy="30%">
+                        <stop offset="0%" stop-color="#5eead4" />
+                        <stop offset="100%" stop-color="#0ea5e9" />
+                      </radialGradient>
+                    </defs>
+                    <!-- Ball base -->
+                    <circle cx="50" cy="50" r="45" fill="url(#ballGrad)" />
+                    <!-- Pentagon patterns -->
+                    <polygon points="50,15 63,28 57,48 43,48 37,28" fill="#0f172a" opacity="0.9"/>
+                    <polygon points="15,50 28,37 48,43 48,57 28,63" fill="#0f172a" opacity="0.9"/>
+                    <polygon points="85,50 72,63 52,57 52,43 72,37" fill="#0f172a" opacity="0.9"/>
+                    <polygon points="30,75 37,72 43,57 37,48 22,55" fill="#0f172a" opacity="0.7"/>
+                    <polygon points="70,75 78,55 63,48 57,57 63,72" fill="#0f172a" opacity="0.7"/>
+                    <polygon points="50,85 57,72 50,57 43,72" fill="#0f172a" opacity="0.7"/>
+                    <!-- Connecting lines -->
+                    <line x1="50" y1="15" x2="28" y2="37" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
+                    <line x1="63" y1="28" x2="72" y2="37" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
+                    <line x1="15" y1="50" x2="22" y2="55" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
+                    <line x1="85" y1="50" x2="78" y2="55" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
+                    <line x1="30" y1="75" x2="43" y2="72" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
+                    <line x1="70" y1="75" x2="57" y2="72" stroke="#0f172a" stroke-width="2" opacity="0.5"/>
+                  </svg>
+                </div>
+                <div class="cover-logo-glow"></div>
+              </div>
+
+              <!-- Title section -->
+              <div class="cover-title-section">
+                <h1 class="cover-main-title">
+                  <span class="cover-title-line">FIFA WORLD CUP</span>
+                  <span class="cover-year">2026</span>
+                </h1>
+                <div class="cover-divider">
+                  <span class="cover-divider-line"></span>
+                  <span class="cover-divider-icon">&#9917;</span>
+                  <span class="cover-divider-line"></span>
+                </div>
+                <h2 class="cover-subtitle">Digital Sticker Album</h2>
+              </div>
+
+              <!-- Description -->
+              <p class="cover-description">
+                Your complete companion for collecting stickers from the world's biggest tournament.
+                Track your collection, find missing pieces, and connect with fellow collectors for trades.
+              </p>
+
+              <!-- Feature highlights -->
+              <div class="cover-features">
+                <div class="cover-feature">
+                  <div class="cover-feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  </div>
+                  <span class="cover-feature-text">Track Progress</span>
+                </div>
+                <div class="cover-feature">
+                  <div class="cover-feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                  </div>
+                  <span class="cover-feature-text">Find Duplicates</span>
+                </div>
+                <div class="cover-feature">
+                  <div class="cover-feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                  </div>
+                  <span class="cover-feature-text">Trade with Others</span>
+                </div>
+              </div>
+
+              <!-- Call to action -->
+              <div class="cover-cta">
+                <p class="cover-welcome">Welcome, collector! Start your journey below.</p>
+                <div class="cover-arrow-hint">
+                  <span class="cover-arrow-text">Use arrows to navigate</span>
+                  <div class="cover-arrows">
+                    <span class="cover-arrow">&#8592;</span>
+                    <span class="cover-arrow">&#8594;</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Attribution -->
+              <div class="cover-attribution">
+                <span class="cover-by">BY</span>
+                <span class="cover-author">JULIAN ROMERO</span>
+              </div>
+            </div>
           </div>
           {% endif %}
         </article>

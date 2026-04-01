@@ -1709,3 +1709,507 @@ a:hover {
 .messages-btn {
   display: none;
 }
+
+/* ==========================================================================
+   Modern Cover Page Styles
+   ========================================================================== */
+
+/* Cover page container */
+.cover-page {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 30% 20%, rgba(30, 41, 59, 0.8) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 80%, rgba(56, 189, 248, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at top, #1e293b 0, #020617 45%, #000 100%);
+}
+
+/* Background pattern */
+.cover-bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(56, 189, 248, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(94, 234, 212, 0.03) 0%, transparent 50%);
+  background-size: 60px 60px;
+  animation: bgFloat 20s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes bgFloat {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-10px, -10px); }
+}
+
+/* Gradient orbs for visual depth */
+.cover-gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.orb-1 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  top: -100px;
+  right: -50px;
+  animation: orbFloat1 15s ease-in-out infinite;
+}
+
+.orb-2 {
+  width: 250px;
+  height: 250px;
+  background: linear-gradient(135deg, #5eead4, #14b8a6);
+  bottom: -50px;
+  left: -80px;
+  animation: orbFloat2 18s ease-in-out infinite;
+}
+
+.orb-3 {
+  width: 180px;
+  height: 180px;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: orbFloat3 20s ease-in-out infinite;
+}
+
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, 30px) scale(1.1); }
+}
+
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -20px) scale(0.95); }
+}
+
+@keyframes orbFloat3 {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+  50% { transform: translate(-40%, -60%) scale(1.2); opacity: 0.5; }
+}
+
+/* Main content container */
+.cover-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 600px;
+  animation: contentFadeIn 1s ease-out;
+}
+
+@keyframes contentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Official badge */
+.cover-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 1rem;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.1), rgba(248, 250, 252, 0.05));
+  border: 1px solid rgba(248, 250, 252, 0.2);
+  border-radius: 999px;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(10px);
+  animation: badgePulse 3s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(248, 250, 252, 0.1); }
+  50% { box-shadow: 0 0 30px rgba(248, 250, 252, 0.2); }
+}
+
+.cover-badge-text {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(248, 250, 252, 0.9);
+  text-shadow: 0 0 10px rgba(248, 250, 252, 0.3);
+}
+
+/* Logo/soccer ball section */
+.cover-logo-container {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.cover-soccer-ball {
+  width: 120px;
+  height: 120px;
+  position: relative;
+  z-index: 2;
+  animation: ballBounce 3s ease-in-out infinite;
+}
+
+@keyframes ballBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-10px) rotate(5deg); }
+  50% { transform: translateY(0) rotate(0deg); }
+  75% { transform: translateY(-5px) rotate(-5deg); }
+}
+
+.soccer-ball-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 10px 30px rgba(56, 189, 248, 0.4));
+}
+
+.cover-logo-glow {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.4) 0%, transparent 70%);
+  z-index: 1;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+
+/* Title section */
+.cover-title-section {
+  margin-bottom: 1.5rem;
+}
+
+.cover-main-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  line-height: 1;
+}
+
+.cover-title-line {
+  font-size: clamp(1.2rem, 4vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: rgba(248, 250, 252, 0.9);
+  text-shadow: 0 0 20px rgba(248, 250, 252, 0.2);
+  animation: titleSlideIn 0.8s ease-out 0.3s both;
+}
+
+.cover-year {
+  font-size: clamp(4rem, 12vw, 7rem);
+  font-weight: 800;
+  background: linear-gradient(135deg, #38bdf8, #5eead4, #818cf8);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-top: 0.2rem;
+  animation: yearSlideIn 0.8s ease-out 0.5s both,
+             gradientShift 5s ease infinite;
+}
+
+@keyframes titleSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes yearSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Decorative divider */
+.cover-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  opacity: 0.6;
+}
+
+.cover-divider-line {
+  width: 50px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(248, 250, 252, 0.5), transparent);
+}
+
+.cover-divider-icon {
+  font-size: 1rem;
+  color: #38bdf8;
+  animation: iconSpin 4s linear infinite;
+}
+
+@keyframes iconSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cover-subtitle {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  font-weight: 500;
+  color: rgba(148, 163, 184, 0.9);
+  margin: 0;
+  letter-spacing: 0.1em;
+  animation: fadeInUp 0.6s ease-out 0.7s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Description */
+.cover-description {
+  font-size: clamp(0.9rem, 2.5vw, 1.05rem);
+  line-height: 1.7;
+  color: rgba(148, 163, 184, 0.85);
+  max-width: 480px;
+  margin: 0 0 2rem 0;
+  animation: fadeInUp 0.6s ease-out 0.9s both;
+}
+
+/* Feature highlights */
+.cover-features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  animation: fadeInUp 0.6s ease-out 1.1s both;
+}
+
+.cover-feature {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.4));
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: 999px;
+  transition: all 0.3s ease;
+}
+
+.cover-feature:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.15);
+}
+
+.cover-feature-icon {
+  width: 20px;
+  height: 20px;
+  color: #38bdf8;
+}
+
+.cover-feature-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.cover-feature-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+/* Call to action section */
+.cover-cta {
+  margin-bottom: 1.5rem;
+  animation: fadeInUp 0.6s ease-out 1.3s both;
+}
+
+.cover-welcome {
+  font-size: 0.95rem;
+  color: rgba(226, 232, 240, 0.8);
+  margin: 0 0 1rem 0;
+}
+
+.cover-arrow-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cover-arrow-text {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.cover-arrows {
+  display: flex;
+  gap: 1rem;
+}
+
+.cover-arrow {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.6));
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 50%;
+  font-size: 1.2rem;
+  color: #38bdf8;
+  animation: arrowPulse 2s ease-in-out infinite;
+}
+
+.cover-arrow:last-child {
+  animation-delay: 0.5s;
+}
+
+@keyframes arrowPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(56, 189, 248, 0);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+  }
+}
+
+/* Attribution */
+.cover-attribution {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  animation: fadeInUp 0.6s ease-out 1.5s both;
+}
+
+.cover-by {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: rgba(148, 163, 184, 0.6);
+}
+
+.cover-author {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: rgba(226, 232, 240, 0.9);
+  background: linear-gradient(135deg, #38bdf8, #5eead4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ==========================================================================
+   Cover Page Responsive Design
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .cover-page {
+    padding: 1.5rem 1rem;
+  }
+
+  .cover-soccer-ball {
+    width: 90px;
+    height: 90px;
+  }
+
+  .cover-features {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .cover-feature {
+    width: 100%;
+    max-width: 200px;
+    justify-content: center;
+  }
+
+  .orb-1,
+  .orb-2,
+  .orb-3 {
+    opacity: 0.25;
+  }
+
+  .orb-1 {
+    width: 200px;
+    height: 200px;
+  }
+
+  .orb-2 {
+    width: 150px;
+    height: 150px;
+  }
+
+  .orb-3 {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media (max-width: 380px) {
+  .cover-badge {
+    padding: 0.3rem 0.8rem;
+  }
+
+  .cover-badge-text {
+    font-size: 0.6rem;
+  }
+
+  .cover-soccer-ball {
+    width: 70px;
+    height: 70px;
+  }
+
+  .cover-divider-line {
+    width: 30px;
+  }
+
+  .cover-arrow {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+}
