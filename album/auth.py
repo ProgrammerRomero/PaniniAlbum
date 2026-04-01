@@ -405,6 +405,74 @@ def profile():
     return render_template("auth/profile.html", stats=stats, countries=COUNTRIES, country_codes=COUNTRY_CODES)
 
 
+@auth_bp.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    """
+    Change password for logged-in user.
+
+    GET: Displays form with current password, new password, and confirm fields
+    POST: Validates all fields and updates password if validation passes
+
+    Validation rules:
+    - Current password must match the user's actual password
+    - New password must be at least 8 characters
+    - New password must contain at least one uppercase letter, one lowercase letter, and one number
+    - New password and confirmation must match
+    """
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        errors = []
+
+        # Validate current password
+        if not current_password:
+            errors.append("Current password is required.")
+        elif not current_user.check_password(current_password):
+            errors.append("Current password is incorrect.")
+
+        # Validate new password length
+        if not new_password or len(new_password) < 8:
+            errors.append("New password must be at least 8 characters.")
+
+        # Validate new password complexity (uppercase, lowercase, number)
+        if new_password:
+            if not any(c.isupper() for c in new_password):
+                errors.append("New password must contain at least one uppercase letter.")
+            if not any(c.islower() for c in new_password):
+                errors.append("New password must contain at least one lowercase letter.")
+            if not any(c.isdigit() for c in new_password):
+                errors.append("New password must contain at least one number.")
+
+        # Validate password confirmation
+        if new_password != confirm_password:
+            errors.append("New password and confirmation do not match.")
+
+        # Return errors if any
+        if errors:
+            for error in errors:
+                flash(error, "error")
+            return render_template("auth/change_password.html"), 400
+
+        # Update password
+        try:
+            current_user.password_hash = bcrypt.generate_password_hash(new_password).decode("utf-8")
+            db.session.commit()
+
+            flash("Password updated successfully.", "success")
+            return redirect(url_for("auth.profile"))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Password change error: {e}")
+            flash("An error occurred while updating your password. Please try again.", "error")
+            return render_template("auth/change_password.html"), 500
+
+    return render_template("auth/change_password.html")
+
+
 @auth_bp.route("/profile/upload-photo", methods=["POST"])
 @login_required
 def upload_photo():
