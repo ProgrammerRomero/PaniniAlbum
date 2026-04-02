@@ -139,6 +139,7 @@
     <!-- Message Input -->
     <footer class="chat-footer">
       <form class="compose-form" id="messageForm" onsubmit="sendMessage(event)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" id="recipientUsername" value="{{ other_user.username }}">
         {% if trade %}
         <input type="hidden" id="tradeId" value="{{ trade.id }}">
@@ -188,7 +189,8 @@
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': '{{ csrf_token() }}'
       },
       body: JSON.stringify({
         recipient_username: recipient,
@@ -221,7 +223,8 @@
     fetch('/auth/api/trade/confirm', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
       },
       body: JSON.stringify({ trade_id: tradeId })
     })

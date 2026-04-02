@@ -1,10 +1,12 @@
 import logging
 import os
+from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 
-from flask import Flask
+from flask import Flask, request, g
 from flask_login import LoginManager
 from flask_mail import Mail
+from flask_wtf.csrf import CSRFProtect
 
 from .routes import bp as album_blueprint
 from .auth import auth_bp
@@ -61,6 +63,15 @@ def create_app() -> Flask:
     os.makedirs(upload_folder, exist_ok=True)
     app.config["UPLOAD_FOLDER"] = upload_folder
 
+    # =========================================================================
+    # SECURITY CONFIGURATION
+    # =========================================================================
+
+    # Session cookie security settings
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=1)
+
     # Mail configuration
     # Check if email is configured via environment variables
     mail_server = os.environ.get("MAIL_SERVER", "").strip()
@@ -104,6 +115,10 @@ def create_app() -> Flask:
     # Initialize Flask-Mail
     mail = Mail()
     mail.init_app(app)
+
+    # Initialize CSRF Protection
+    csrf = CSRFProtect()
+    csrf.init_app(app)
 
     # =========================================================================
     # LOGGING CONFIGURATION (for monitoring)
@@ -187,6 +202,42 @@ def create_app() -> Flask:
         having to pass it explicitly in every route.
         """
         return dict(team_pages=team_pages_by_code())
+
+    # =========================================================================
+    # SECURITY HEADERS MIDDLEWARE
+    # =========================================================================
+
+    @app.after_request
+    def add_security_headers(response):
+        """
+        Add security headers to all responses.
+        """
+        # Prevent clickjacking attacks
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Enable XSS protection (legacy browsers)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Content Security Policy - restrictive but allows necessary resources
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://flagcdn.com; "
+            "img-src 'self' data: https://flagcdn.com; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'self'; "
+            "base-uri 'self'; "
+            "form-action 'self';"
+        )
+
+        # Referrer Policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        return response
 
     # =========================================================================
     # CREATE DATABASE TABLES

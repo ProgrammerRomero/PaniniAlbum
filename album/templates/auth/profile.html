@@ -38,6 +38,7 @@
           </div>
           <!-- Photo Upload Form -->
           <form method="POST" action="{{ url_for('auth.upload_photo') }}" enctype="multipart/form-data" class="photo-upload-form" id="photoUploadForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="button" class="btn btn-secondary btn-sm photo-upload-btn" onclick="event.stopPropagation(); event.preventDefault(); document.getElementById('photoUpload').click(); return false;">
               Upload Photo
             </button>
@@ -66,6 +67,7 @@
           <h2 class="card-title">Account Information</h2>
 
           <form method="POST" action="{{ url_for('auth.profile') }}" class="profile-form" id="profileForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="detail-list">
               <div class="detail-item">
                 <span class="detail-label">Username:</span>
@@ -231,6 +233,7 @@
     <div class="modal-actions">
       <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">Cancel</button>
       <form method="POST" action="{{ url_for('auth.delete_account') }}" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-danger">Delete Account</button>
       </form>
     </div>

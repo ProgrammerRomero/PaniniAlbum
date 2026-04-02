@@ -400,7 +400,8 @@ function toggleFavoriteConversation(event, username) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest'
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': '{{ csrf_token() }}'
     },
     body: JSON.stringify({ username: username })
   })

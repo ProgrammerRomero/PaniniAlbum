@@ -38,6 +38,7 @@
 
     <!-- Contact Form -->
     <form class="contact-form" method="POST" action="{{ url_for('auth.contact_support') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <!-- Subject Field -->
       <div class="form-group">

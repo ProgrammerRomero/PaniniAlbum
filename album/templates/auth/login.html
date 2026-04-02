@@ -21,6 +21,7 @@
     {% endwith %}
 
     <form class="auth-form" method="POST" action="{{ url_for('auth.login') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-group">
         <label for="username" class="form-label">Username or Email</label>
         <input type="text" id="username" name="username" class="form-input"
@@ -64,6 +65,7 @@
         <p class="contact-modal-intro">Send a message to <strong>The Master Guy</strong>. We'll get back to you as soon as possible.</p>
 
         <form id="contactForm" class="contact-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="form-group">
             <label for="contactName" class="form-label">Your Name *</label>
             <input type="text" id="contactName" name="name" class="form-input" placeholder="Enter your name" required>
@@ -206,7 +208,10 @@
     try {
       const response = await fetch('/auth/api/contact-public', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
         body: JSON.stringify(formData)
       });
 
