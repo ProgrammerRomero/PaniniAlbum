@@ -9,14 +9,30 @@
     Friendly loading screen while album initializes.
     Prevents flash of cover page when navigating directly to a team.
   -->
+  <!--
+    LOADING OVERLAY
+    Animated soccer ball bouncing between goals with FIFA World Cup 2026 branding
+  -->
   <div id="albumLoadingOverlay" class="album-loading-overlay">
-    <div class="album-loading-card">
-      <div class="album-loading-emoji">⚽</div>
-      <h2 class="album-loading-title">Getting your album ready!</h2>
-      <p class="album-loading-subtitle">Loading your sticker collection...</p>
-      <div class="album-loading-dots">
-        <span></span><span></span><span></span>
-      </div>
+    <!-- Blurred background with stadium effect -->
+    <div class="loading-bg-blur"></div>
+
+    <!-- Goal posts -->
+    <div class="goal-post goal-left"></div>
+    <div class="goal-post goal-right"></div>
+    <div class="goal-crossbar"></div>
+
+    <!-- Animated soccer ball -->
+    <div class="soccer-ball-container">
+      <div class="soccer-ball">⚽</div>
+      <div class="ball-shadow"></div>
+    </div>
+
+    <!-- FIFA World Cup 2026 Text -->
+    <div class="loading-branding">
+      <h1 class="loading-title">FIFA WORLD CUP</h1>
+      <div class="loading-year">2026</div>
+      <div class="loading-subtitle">Loading your album...</div>
     </div>
   </div>
 
@@ -289,11 +305,13 @@
                 </div>
               </div>
 
-              <!-- Attribution -->
+              <!-- Attribution (hidden) -->
+              <!--
               <div class="cover-attribution">
                 <span class="cover-by">BY</span>
                 <span class="cover-author">JULIAN ROMERO</span>
               </div>
+              -->
 
             </div>
           </div>
@@ -312,70 +330,6 @@
     <!-- Populated dynamically with "Page X of Y" -->
   </div>
 </section>
-
-
-<!--
-    ============================================================================
-    STATISTICS MODAL
-    ============================================================================
-
-    This modal displays collection statistics and is hidden by default.
-    It is shown when the user clicks the "Stats" button in the navbar.
-
-    The modal contains two main sections:
-    1. Overall Stats: Shows total completion percentage and count (STICKY HEADER)
-    2. Team Progress: Shows progress bars for each team (SCROLLABLE)
-
-    The modal is centered on the page and the header stays visible while
-    scrolling through the team list.
-  -->
-<div id="statsModal" class="modal" style="display: none;">
-  <!-- Modal overlay: clicking this closes the modal -->
-  <div class="modal-overlay" id="statsModalOverlay"></div>
-
-  <!-- Modal content container -->
-  <div class="modal-content stats-modal-content">
-    <!-- Modal header with title and close button (STICKY) -->
-    <div class="modal-header stats-modal-header">
-      <h2 class="modal-title">📊 Collection Statistics</h2>
-      <button class="modal-close" id="statsModalClose" type="button" aria-label="Close modal">×</button>
-    </div>
-
-    <!-- Sticky summary section with overall stats -->
-    <div class="stats-modal-summary">
-      <!--
-          OVERALL STATS SECTION
-          Shows big-picture metrics:
-          - Completion percentage (large number)
-          - Owned / Total count
-        -->
-      <div class="stats-section overall-stats">
-        <div class="stats-overall-item">
-          <span class="stats-overall-label">Album Complete</span>
-          <span class="stats-overall-value" id="statsOverallPercent">0%</span>
-        </div>
-        <div class="stats-overall-item">
-          <span class="stats-overall-label">Stickers Owned</span>
-          <span class="stats-overall-value" id="statsOverallCount">0 / 0</span>
-        </div>
-      </div>
-
-      <!-- Section title for team progress -->
-      <h3 class="stats-section-title">Progress by Team</h3>
-    </div>
-
-    <!-- Scrollable team list section -->
-    <div class="stats-modal-scrollable">
-      <div id="statsTeamList" class="stats-team-list">
-        <!-- Team progress bars will be inserted here by JavaScript -->
-      </div>
-    </div>
-
-  </div>
-  <!-- End modal content -->
-
-</div>
-<!-- End stats modal -->
 
 
 <!--

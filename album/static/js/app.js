@@ -53,15 +53,44 @@
   const statsOverallCount = document.getElementById("statsOverallCount");
   const statsTeamList = document.getElementById("statsTeamList");
 
-  // Album structure data embedded in the HTML by Flask
+  // Album structure data embedded in the HTML by Flask or fetched via API
   let albumStructure = [];
-  try {
-    const albumDataElement = document.getElementById("albumStructureData");
-    if (albumDataElement) {
-      albumStructure = JSON.parse(albumDataElement.textContent);
+  let albumStructureLoaded = false;
+
+  /**
+   * Load album structure from embedded JSON or fetch from API.
+   * This allows the stats modal to work on all pages.
+   */
+  async function loadAlbumStructure() {
+    if (albumStructureLoaded) return;
+
+    try {
+      // First try to parse embedded data
+      const albumDataElement = document.getElementById("albumStructureData");
+      if (albumDataElement) {
+        const embeddedData = JSON.parse(albumDataElement.textContent);
+        if (embeddedData && embeddedData.length > 0) {
+          albumStructure = embeddedData;
+          albumStructureLoaded = true;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to parse embedded album structure:", e);
     }
-  } catch (e) {
-    console.warn("Failed to parse album structure data:", e);
+
+    // If no embedded data or empty, fetch from API
+    try {
+      const response = await fetch("/api/album-structure");
+      if (response.ok) {
+        albumStructure = await response.json();
+        albumStructureLoaded = true;
+      } else {
+        console.warn("Failed to fetch album structure from API");
+      }
+    } catch (e) {
+      console.warn("Failed to load album structure:", e);
+    }
   }
 
   let currentPageIndex = 0;
@@ -487,7 +516,10 @@
   // STATISTICS DASHBOARD
   // ===========================================================================
 
-  function calculateStats() {
+  async function calculateStats() {
+    // Ensure album structure is loaded
+    await loadAlbumStructure();
+
     let totalOwned = 0;
     let totalStickers = 0;
     const teamStats = [];
@@ -533,8 +565,8 @@
     };
   }
 
-  function openStatsModal() {
-    const stats = calculateStats();
+  async function openStatsModal() {
+    const stats = await calculateStats();
 
     if (statsOverallPercent) {
       statsOverallPercent.textContent = `${stats.overall.percent}%`;
@@ -936,6 +968,10 @@
   async function init() {
     // ALWAYS initialize user dropdown (works on all pages including profile)
     initUserDropdown();
+
+    // Pre-load album structure for stats modal (needed on all authenticated pages)
+    // This runs in parallel with other init tasks
+    const albumStructurePromise = loadAlbumStructure();
 
     // Logo click - go to cover page (not on login/register pages)
     const logoHomeLink = document.getElementById("logoHomeLink");

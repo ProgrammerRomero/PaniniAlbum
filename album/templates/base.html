@@ -22,7 +22,7 @@
         {% if request.endpoint in ('auth.login', 'auth.register', 'auth.forgot_password', 'auth.reset_password') %}
         <span class="navbar-logo" id="logoHomeLink" style="cursor: default;">
           <span class="logo-mark">⚽</span>
-          <span class="logo-text">Panini Album 2026 - JULIAN ROMERO</span>
+          <span class="logo-text">Panini Album 2026</span>
         </span>
         {% else %}
         <a href="#" class="navbar-logo" id="logoHomeLink" title="Ir a la página de inicio">
@@ -127,8 +127,51 @@
   </main>
 
   <footer class="app-footer">
-    <span>Fully client‑side progress tracking - by Julian Romero</span>
+    <span>Fully client‑side progress tracking</span>
   </footer>
+
+  <!--
+    STATS MODAL
+    Available on all pages for logged-in users
+    Shows collection statistics with team progress bars
+  -->
+  {% if current_user.is_authenticated %}
+  <div id="statsModal" class="modal" style="display: none;">
+    <div class="modal-overlay" id="statsModalOverlay"></div>
+    <div class="modal-content stats-modal-content">
+      <div class="modal-header stats-modal-header">
+        <h2 class="modal-title">📊 Collection Statistics</h2>
+        <button class="modal-close" id="statsModalClose" type="button" aria-label="Close modal">×</button>
+      </div>
+      <div class="stats-modal-summary">
+        <div class="stats-section overall-stats">
+          <div class="stats-overall-item">
+            <span class="stats-overall-label">Album Complete</span>
+            <span class="stats-overall-value" id="statsOverallPercent">0%</span>
+          </div>
+          <div class="stats-overall-item">
+            <span class="stats-overall-label">Stickers Owned</span>
+            <span class="stats-overall-value" id="statsOverallCount">0 / 0</span>
+          </div>
+        </div>
+        <h3 class="stats-section-title">Progress by Team</h3>
+      </div>
+      <div class="stats-modal-scrollable">
+        <div id="statsTeamList" class="stats-team-list">
+          <!-- Team progress bars will be inserted here by JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!--
+    ALBUM STRUCTURE DATA (JSON)
+    Embedded for album page, fetched via API for other pages
+  -->
+  <script id="albumStructureData" type="application/json">
+    {{ album_pages | default([]) | tojson }}
+  </script>
 
   <!-- Main behaviour script -->
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
