@@ -128,6 +128,7 @@ def export_missing():
 
 
 @bp.route("/export-duplicates", methods=["POST"])
+@login_required
 def export_duplicates():
     """
     Generate an Excel file listing **duplicate** stickers for trading.
