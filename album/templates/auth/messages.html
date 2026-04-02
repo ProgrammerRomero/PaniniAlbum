@@ -393,6 +393,9 @@ function toggleFavoriteConversation(event, username) {
   event.preventDefault();
   event.stopPropagation();
 
+  // Get the button element (event.target could be the star emoji inside)
+  const btn = event.currentTarget;
+
   fetch('/auth/api/conversations/favorite', {
     method: 'POST',
     headers: {
@@ -405,7 +408,6 @@ function toggleFavoriteConversation(event, username) {
   .then(data => {
     if (data.success) {
       // Update button appearance
-      const btn = event.target;
       if (data.is_favorite) {
         btn.classList.add('active');
         btn.title = 'Remove from favorites';
@@ -422,5 +424,8 @@ function toggleFavoriteConversation(event, username) {
     alert('Failed to update favorite status');
   });
 }
+
+// Expose to global scope for inline onclick handlers
+window.toggleFavoriteConversation = toggleFavoriteConversation;
 </script>
 {% endblock %}

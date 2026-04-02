@@ -1,4 +1,5 @@
 curl https://your-app.railway.app/health -> run it in Powershell
+taskkill /F /IM python.exe /IM python3.12.exe --> KILL ANY PREVIOUS LOCAL SERVER RUN
 python app.py
 git remote add origin https://github.com/ProgrammerRomero/PaniniAlbum.git
 
