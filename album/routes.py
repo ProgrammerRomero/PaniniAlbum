@@ -19,6 +19,7 @@ bp = Blueprint("album", __name__)
 
 
 @bp.route("/")
+@login_required
 def index():
     """
     Render the main album view.
@@ -38,6 +39,7 @@ def index():
 
 
 @bp.route("/api/album-structure")
+@login_required
 def album_structure_api():
     """
     Lightweight JSON endpoint exposing the album metadata.
@@ -50,6 +52,7 @@ def album_structure_api():
 
 
 @bp.route("/export-missing", methods=["POST"])
+@login_required
 def export_missing():
     """
     Generate an Excel file listing **missing** stickers.
