@@ -8,6 +8,7 @@ All routes use CSRF protection (via Flask-WTF implicitly) and secure password ha
 from datetime import datetime, timezone
 from functools import wraps
 import json
+import secrets
 
 from flask import (
     Blueprint,
@@ -28,15 +29,19 @@ from flask_login import (
 )
 from flask_mail import Message as MailMessage, Mail
 
-from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation, COUNTRIES, COUNTRY_CODES
+from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation, ConversationFavorite, COUNTRIES, COUNTRY_CODES
 from .utils import validate_email
 
 # Create blueprint
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 # Support user configuration
-SUPPORT_USERNAME = "the_pibe_support"
+SUPPORT_USERNAME = "The Master Guy"
 SUPPORT_EMAIL = "support@paninialbum.local"
+
+# Public contact form sender (to avoid "messaging yourself" error)
+PUBLIC_CONTACT_USERNAME = "Public Contact"
+PUBLIC_CONTACT_EMAIL = "contact@paninialbum.local"
 
 
 # =============================================================================
@@ -720,8 +725,12 @@ def users():
 
     current_missing = all_sticker_ids - current_owned
 
-    # Get all other users
-    other_users = User.query.filter(User.id != current_user.id).all()
+    # Get all other users, excluding system users (support and public contact)
+    other_users = User.query.filter(
+        User.id != current_user.id,
+        User.username != SUPPORT_USERNAME,
+        User.username != PUBLIC_CONTACT_USERNAME
+    ).all()
 
     user_data = []
 
@@ -977,6 +986,10 @@ def messages_inbox():
 
     Shows all conversations grouped by other user.
     """
+    # Migrate any old self-messages (for The Master Guy)
+    if current_user.username == SUPPORT_USERNAME:
+        migrate_self_messages_to_public_contact()
+
     # Get all messages where user is sender or recipient
     sent = current_user.sent_messages.order_by(Message.created_at.desc()).all()
     received = current_user.received_messages.order_by(Message.created_at.desc()).all()
@@ -985,6 +998,10 @@ def messages_inbox():
     conversations = {}
 
     for msg in sent + received:
+        # Skip messages where sender is the same as recipient (corrupted data)
+        if msg.sender_id == msg.recipient_id:
+            continue
+
         # Determine the other user in the conversation
         other_user_id = msg.recipient_id if msg.sender_id == current_user.id else msg.sender_id
         other_user = User.query.get(other_user_id)
@@ -1010,6 +1027,15 @@ def messages_inbox():
         if msg.created_at > conversations[other_user_id]["last_message"].created_at:
             conversations[other_user_id]["last_message"] = msg
 
+    # Check which conversations are favorited
+    favorited_conversation_ids = set()
+    for fav in current_user.favorite_conversations:
+        favorited_conversation_ids.add(fav.other_user_id)
+
+    # Mark conversations as favorite
+    for conv in conversations.values():
+        conv["is_favorite"] = conv["user"].id in favorited_conversation_ids
+
     # Sort by last message time
     sorted_conversations = sorted(
         conversations.values(),
@@ -1034,11 +1060,20 @@ def messages_conversation(username):
         flash("Cannot message yourself.", "error")
         return redirect(url_for("auth.messages_inbox"))
 
+    # Check if this is a Public Contact conversation (reverse order)
+    is_public_contact = other_user.username == PUBLIC_CONTACT_USERNAME
+
     # Get all messages between these two users
-    messages = Message.query.filter(
+    # For Public Contact: newest first (desc), for others: oldest first (asc)
+    messages_query = Message.query.filter(
         ((Message.sender_id == current_user.id) & (Message.recipient_id == other_user.id)) |
         ((Message.sender_id == other_user.id) & (Message.recipient_id == current_user.id))
-    ).order_by(Message.created_at.asc()).all()
+    )
+
+    if is_public_contact:
+        messages = messages_query.order_by(Message.created_at.desc()).all()
+    else:
+        messages = messages_query.order_by(Message.created_at.asc()).all()
 
     # Mark received messages as read
     for msg in messages:
@@ -1077,7 +1112,8 @@ def messages_conversation(username):
         trade_confirmed=trade_confirmed,
         now=datetime.now(timezone.utc),
         stickers_offered=stickers_offered,
-        stickers_requested=stickers_requested
+        stickers_requested=stickers_requested,
+        is_public_contact=is_public_contact
     )
 
 
@@ -1167,6 +1203,110 @@ def send_message():
         db.session.rollback()
         current_app.logger.error(f"Failed to send message: {e}")
         return jsonify({"success": False, "error": "Failed to send message"}), 500
+
+
+@auth_bp.route("/api/conversations/favorite", methods=["POST"])
+@login_required
+def favorite_conversation():
+    """
+    Toggle favorite status for an entire conversation.
+
+    Request body (JSON):
+        - username: Username of the conversation partner
+
+    Returns:
+        JSON response with success status
+    """
+    data = request.get_json(silent=True) or {}
+    username = data.get("username", "").strip()
+
+    if not username:
+        return jsonify({"success": False, "error": "Username required"}), 400
+
+    other_user = User.query.filter_by(username=username).first()
+    if not other_user:
+        return jsonify({"success": False, "error": "User not found"}), 404
+
+    if other_user.id == current_user.id:
+        return jsonify({"success": False, "error": "Cannot favorite yourself"}), 400
+
+    try:
+        # Check if already favorited
+        existing = ConversationFavorite.query.filter_by(
+            user_id=current_user.id,
+            other_user_id=other_user.id
+        ).first()
+
+        if existing:
+            # Remove from favorites
+            db.session.delete(existing)
+            db.session.commit()
+            return jsonify({"success": True, "is_favorite": False}), 200
+        else:
+            # Add to favorites
+            favorite = ConversationFavorite(
+                user_id=current_user.id,
+                other_user_id=other_user.id
+            )
+            db.session.add(favorite)
+            db.session.commit()
+            return jsonify({"success": True, "is_favorite": True}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to favorite conversation: {e}")
+        return jsonify({"success": False, "error": "Failed to favorite conversation"}), 500
+
+
+@auth_bp.route("/messages/favorites")
+@login_required
+def messages_favorites():
+    """
+    Display all favorited conversations for current user.
+
+    Shows a list of conversations that have been marked as favorite.
+    """
+    # Get favorited conversation partners
+    favorite_entries = ConversationFavorite.query.filter_by(
+        user_id=current_user.id
+    ).all()
+
+    conversations = []
+    for fav in favorite_entries:
+        other_user = fav.other_user
+
+        # Get the last message in this conversation
+        last_message = Message.query.filter(
+            ((Message.sender_id == current_user.id) & (Message.recipient_id == other_user.id)) |
+            ((Message.sender_id == other_user.id) & (Message.recipient_id == current_user.id))
+        ).order_by(Message.created_at.desc()).first()
+
+        if last_message:
+            # Count unread messages
+            unread_count = Message.query.filter(
+                Message.sender_id == other_user.id,
+                Message.recipient_id == current_user.id,
+                Message.is_read == False
+            ).count()
+
+            conversations.append({
+                "user": other_user,
+                "last_message": last_message,
+                "unread_count": unread_count,
+                "is_favorite": True
+            })
+
+    # Sort by last message time
+    sorted_conversations = sorted(
+        conversations,
+        key=lambda x: x["last_message"].created_at,
+        reverse=True
+    )
+
+    return render_template(
+        "auth/messages_favorites.html",
+        conversations=sorted_conversations
+    )
 
 
 @auth_bp.route("/api/messages/unread-count")
@@ -1299,7 +1439,6 @@ def get_or_create_support_user():
         return support_user
 
     # Create support user with a secure random password
-    import secrets
     support_user = User(
         username=SUPPORT_USERNAME,
         email=SUPPORT_EMAIL,
@@ -1309,6 +1448,83 @@ def get_or_create_support_user():
     db.session.commit()
     current_app.logger.info(f"Created support user: {SUPPORT_USERNAME}")
     return support_user
+
+
+def get_or_create_public_contact_user():
+    """
+    Get or create the public contact sender user.
+
+    This user acts as the sender for messages submitted via the public
+    contact form, preventing the "Cannot message yourself" error when
+    The Master Guy receives these messages.
+
+    Returns:
+        User: The public contact user instance
+    """
+    # Check by username first
+    contact_user = User.query.filter_by(username=PUBLIC_CONTACT_USERNAME).first()
+
+    if contact_user:
+        return contact_user
+
+    # Check if email already exists
+    contact_user = User.query.filter_by(email=PUBLIC_CONTACT_EMAIL).first()
+
+    if contact_user:
+        # Update the username to match expected
+        contact_user.username = PUBLIC_CONTACT_USERNAME
+        db.session.commit()
+        current_app.logger.info(f"Updated existing public contact user: {PUBLIC_CONTACT_USERNAME}")
+        return contact_user
+
+    # Create public contact user with a secure random password
+    contact_user = User(
+        username=PUBLIC_CONTACT_USERNAME,
+        email=PUBLIC_CONTACT_EMAIL,
+        password=secrets.token_urlsafe(32)
+    )
+    db.session.add(contact_user)
+    db.session.commit()
+    current_app.logger.info(f"Created public contact user: {PUBLIC_CONTACT_USERNAME}")
+    return contact_user
+
+
+def migrate_self_messages_to_public_contact():
+    """
+    Migrate existing messages where sender_id == recipient_id to use Public Contact.
+
+    This fixes messages created before the public contact user was implemented,
+    allowing The Master Guy to view them without the "Cannot message yourself" error.
+
+    Returns:
+        int: Number of messages migrated
+    """
+    try:
+        support_user = get_or_create_support_user()
+        public_contact_user = get_or_create_public_contact_user()
+
+        # Find messages where sender_id == recipient_id == support_user.id
+        self_messages = Message.query.filter(
+            Message.sender_id == support_user.id,
+            Message.recipient_id == support_user.id
+        ).all()
+
+        migrated_count = 0
+        for msg in self_messages:
+            # Change sender to Public Contact, keep recipient as The Master Guy
+            msg.sender_id = public_contact_user.id
+            migrated_count += 1
+
+        if migrated_count > 0:
+            db.session.commit()
+            current_app.logger.info(f"Migrated {migrated_count} self-messages to Public Contact")
+
+        return migrated_count
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to migrate self-messages: {e}")
+        return 0
 
 
 def get_support_categories():
@@ -1400,3 +1616,113 @@ def contact_support():
         support_user=support_user,
         categories=get_support_categories()
     )
+
+
+@auth_bp.route("/api/contact-public", methods=["POST"])
+def contact_public():
+    """
+    Public contact form API endpoint for non-logged-in users.
+
+    Allows visitors to send messages to The Master Guy without logging in.
+    Messages are formatted and sent to the support user account.
+
+    Request body (JSON):
+        - name: Sender's name
+        - email: Sender's email
+        - subject: Message subject
+        - message: Message content
+
+    Returns:
+        JSON response with success status
+    """
+    from flask import request, jsonify
+
+    data = request.get_json(silent=True) or {}
+
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+    subject = data.get("subject", "").strip()
+    message_content = data.get("message", "").strip()
+
+    # Validation
+    errors = []
+    if not name:
+        errors.append("Name is required.")
+    if not email:
+        errors.append("Email is required.")
+    if not subject:
+        errors.append("Subject is required.")
+    if not message_content:
+        errors.append("Message is required.")
+
+    if errors:
+        return jsonify({"success": False, "errors": errors}), 400
+
+    try:
+        # Get or create support user (The Master Guy) and public contact user
+        support_user = get_or_create_support_user()
+        public_contact_user = get_or_create_public_contact_user()
+
+        # Format message with sender info
+        formatted_content = f"""[Public Contact Form]
+
+From: {name} ({email})
+Subject: {subject}
+
+{message_content}"""
+
+        # Create message from public contact user to support user
+        # This avoids the "Cannot message yourself" error
+        message = Message(
+            sender_id=public_contact_user.id,
+            recipient_id=support_user.id,
+            content=formatted_content
+        )
+        db.session.add(message)
+        db.session.commit()
+
+        # Also send email notification if configured
+        try:
+            send_support_notification_email(name, email, subject, message_content)
+        except Exception as e:
+            current_app.logger.warning(f"Failed to send support notification email: {e}")
+
+        return jsonify({"success": True, "message": "Message sent successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to send public contact message: {e}")
+        return jsonify({"success": False, "errors": ["An error occurred. Please try again."]}), 500
+
+
+def send_support_notification_email(name, email, subject, message_content):
+    """
+    Send email notification to support when a public contact form is submitted.
+
+    Args:
+        name: Sender's name
+        email: Sender's email
+        subject: Message subject
+        message_content: Message body
+    """
+    try:
+        msg = MailMessage(
+            subject=f"[Panini Album Contact] {subject}",
+            sender=current_app.config.get("MAIL_DEFAULT_SENDER"),
+            recipients=[SUPPORT_EMAIL],
+            body=f"""New contact form submission:
+
+From: {name} <{email}>
+Subject: {subject}
+
+Message:
+{message_content}
+
+---
+Reply to: {email}
+"""
+        )
+        mail_instance = Mail(current_app)
+        mail_instance.send(msg)
+    except Exception as e:
+        raise e

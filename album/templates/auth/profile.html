@@ -107,7 +107,7 @@
 
               <div class="detail-item">
                 <span class="detail-label">Member Since:</span>
-                <span class="detail-value">{{ current_user.created_at.strftime('%B %d, %Y') }}</span>
+                <span class="detail-value">{{ current_user.created_at|aus_date }}</span>
               </div>
 
               <div class="detail-item stars-row">

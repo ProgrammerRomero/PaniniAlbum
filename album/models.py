@@ -387,6 +387,36 @@ class TradeConfirmation(db.Model):
         return f"<TradeConfirmation trade={self.trade_id} user={self.user_id}>"
 
 
+class ConversationFavorite(db.Model):
+    """
+    Tracks favorited conversations at the conversation level.
+
+    When a user favorites a conversation with another user, all messages
+    in that conversation are effectively marked as favorite for that user.
+    """
+
+    __tablename__ = "conversation_favorites"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    other_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    user = db.relationship("User", foreign_keys=[user_id], backref="favorite_conversations")
+    other_user = db.relationship("User", foreign_keys=[other_user_id])
+
+    # Unique constraint: each user can only favorite a conversation once
+    __table_args__ = (db.UniqueConstraint("user_id", "other_user_id", name="unique_conversation_favorite"),)
+
+    def __init__(self, user_id: int, other_user_id: int):
+        self.user_id = user_id
+        self.other_user_id = other_user_id
+
+    def __repr__(self) -> str:
+        return f"<ConversationFavorite user={self.user_id} other={self.other_user_id}>"
+
+
 # Country name to ISO code mapping for flags
 COUNTRY_CODES = {
     "Afghanistan": "AF",

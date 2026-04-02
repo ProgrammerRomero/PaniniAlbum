@@ -48,7 +48,178 @@
     <footer class="auth-footer">
       <p><a href="{{ url_for('auth.forgot_password') }}" class="auth-link">Forgot password?</a></p>
       <p>Don't have an account? <a href="{{ url_for('auth.register') }}" class="auth-link">Register here</a></p>
+      <p><a href="#" class="auth-link" id="contactUsLink">Contact Us</a></p>
     </footer>
   </div>
+
+  <!-- Contact Us Modal -->
+  <div id="contactModal" class="modal" style="display: none;">
+    <div class="modal-overlay" id="contactModalOverlay"></div>
+    <div class="modal-content contact-modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">📨 Contact Us</h2>
+        <button class="modal-close" id="contactModalClose" type="button" aria-label="Close modal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="contact-modal-intro">Send a message to <strong>The Master Guy</strong>. We'll get back to you as soon as possible.</p>
+
+        <form id="contactForm" class="contact-form">
+          <div class="form-group">
+            <label for="contactName" class="form-label">Your Name *</label>
+            <input type="text" id="contactName" name="name" class="form-input" placeholder="Enter your name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="contactEmail" class="form-label">Your Email *</label>
+            <input type="email" id="contactEmail" name="email" class="form-input" placeholder="Enter your email" required>
+          </div>
+
+          <div class="form-group">
+            <label for="contactSubject" class="form-label">Subject *</label>
+            <input type="text" id="contactSubject" name="subject" class="form-input" placeholder="Brief description" required>
+          </div>
+
+          <div class="form-group">
+            <label for="contactMessage" class="form-label">Message *</label>
+            <textarea id="contactMessage" name="message" class="form-textarea" rows="4" placeholder="Your message..." required></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Send Message</button>
+            <button type="button" class="btn btn-secondary" id="contactCancelBtn">Cancel</button>
+          </div>
+        </form>
+
+        <div id="contactSuccessMessage" class="contact-success" style="display: none;">
+          <p>✅ Message sent successfully! We'll get back to you soon.</p>
+          <button type="button" class="btn btn-primary" id="contactOkBtn">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
+
+<style>
+/* Contact Modal Styles */
+.contact-modal-content {
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.contact-modal-intro {
+  margin: 0 0 1.5rem 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.contact-modal-intro strong {
+  color: var(--color-accent);
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.contact-success {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.contact-success p {
+  color: #22c55e;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+#contactModal .form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+#contactModal .form-actions .btn {
+  flex: 1;
+}
+</style>
+
+<script>
+(function() {
+  const contactModal = document.getElementById('contactModal');
+  const contactLink = document.getElementById('contactUsLink');
+  const closeBtn = document.getElementById('contactModalClose');
+  const overlay = document.getElementById('contactModalOverlay');
+  const cancelBtn = document.getElementById('contactCancelBtn');
+  const contactForm = document.getElementById('contactForm');
+  const successMsg = document.getElementById('contactSuccessMessage');
+  const okBtn = document.getElementById('contactOkBtn');
+
+  function openModal(e) {
+    if (e) e.preventDefault();
+    contactModal.style.display = 'flex';
+    requestAnimationFrame(() => {
+      contactModal.classList.add('modal-open');
+    });
+    document.getElementById('contactName').focus();
+  }
+
+  function closeModal() {
+    contactModal.classList.remove('modal-open');
+    setTimeout(() => {
+      contactModal.style.display = 'none';
+      // Reset form
+      contactForm.reset();
+      contactForm.style.display = 'flex';
+      successMsg.style.display = 'none';
+    }, 200);
+  }
+
+  function showSuccess() {
+    contactForm.style.display = 'none';
+    successMsg.style.display = 'block';
+  }
+
+  contactLink.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('click', closeModal);
+  okBtn.addEventListener('click', closeModal);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && contactModal.style.display === 'flex') {
+      closeModal();
+    }
+  });
+
+  contactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = {
+      name: document.getElementById('contactName').value,
+      email: document.getElementById('contactEmail').value,
+      subject: document.getElementById('contactSubject').value,
+      message: document.getElementById('contactMessage').value
+    };
+
+    try {
+      const response = await fetch('/auth/api/contact-public', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        showSuccess();
+      } else {
+        alert('Failed to send message. Please try again.');
+      }
+    } catch (err) {
+      console.error('Contact form error:', err);
+      alert('An error occurred. Please try again.');
+    }
+  });
+})();
+</script>
 {% endblock %}

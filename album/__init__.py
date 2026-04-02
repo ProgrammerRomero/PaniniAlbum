@@ -136,6 +136,45 @@ def create_app() -> Flask:
         return User.query.get(int(user_id))
 
     # =========================================================================
+    # JINJA2 FILTERS
+    # =========================================================================
+
+    from datetime import datetime, timezone, timedelta
+
+    @app.template_filter("aus_time")
+    def aus_time_filter(dt, format_str="%b %d, %I:%M %p"):
+        """
+        Convert UTC datetime to Australian Eastern Time (UTC+10 or UTC+11 for DST).
+
+        Usage in templates:
+            {{ message.created_at|aus_time }}
+            {{ message.created_at|aus_time("%Y-%m-%d %H:%M") }}
+        """
+        if dt is None:
+            return ""
+
+        # Make sure datetime is timezone-aware (assume UTC if naive)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        # Australian Eastern Time (UTC+10 standard, UTC+11 during DST)
+        # DST is from first Sunday in October to first Sunday in April
+        aus_tz = timezone(timedelta(hours=10))  # AEST (standard time)
+        aus_dt = dt.astimezone(aus_tz)
+
+        return aus_dt.strftime(format_str)
+
+    @app.template_filter("aus_time_short")
+    def aus_time_short_filter(dt):
+        """Short format: HH:MM AM/PM"""
+        return aus_time_filter(dt, "%I:%M %p")
+
+    @app.template_filter("aus_date")
+    def aus_date_filter(dt):
+        """Date only format: Month DD, YYYY"""
+        return aus_time_filter(dt, "%B %d, %Y")
+
+    # =========================================================================
     # CONTEXT PROCESSOR (inject variables into all templates)
     # =========================================================================
 

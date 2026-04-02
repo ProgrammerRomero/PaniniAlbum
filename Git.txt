@@ -1,3 +1,4 @@
+curl https://your-app.railway.app/health -> run it in Powershell
 python app.py
 git remote add origin https://github.com/ProgrammerRomero/PaniniAlbum.git
 
@@ -54,6 +55,9 @@ git reset --hard <Commit Id>    *****Force Reset a commit**********
 git reset --hard HEAD           *****Reset everything to last commit (most common)********
 git fetch origin                Reset to last pushed version (origin)
 git reset --hard origin/main    Reset to last pushed version (origin)
+
+git branch -f uat ea4cdfb && git branch -f main ea4cdfb && git branch -f
+   production ea4cdfb
 
 🧠 Key difference
 Command	What it does

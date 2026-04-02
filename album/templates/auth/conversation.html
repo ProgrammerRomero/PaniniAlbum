@@ -34,7 +34,7 @@
             </h1>
             <span class="user-status">
               {% if other_user.last_login %}
-              Last seen {{ other_user.last_login.strftime('%b %d') }}
+              Last seen {{ other_user.last_login|aus_time("%b %d") }}
               {% else %}
               New user
               {% endif %}
@@ -107,11 +107,11 @@
       <div class="messages-list">
         {% for msg in messages %}
         {% set is_me = msg.sender_id == current_user.id %}
-        <div class="message-wrapper {{ 'me' if is_me else 'them' }}">
+        <div class="message-wrapper {{ 'me' if is_me else 'them' }}" data-message-id="{{ msg.id }}">
           <div class="message-bubble">
             <div class="message-text">{{ msg.content }}</div>
             <div class="message-footer">
-              <time class="message-time">{{ msg.created_at.strftime('%I:%M %p') }}</time>
+              <time class="message-time">{{ msg.created_at|aus_time_short }}</time>
               {% if is_me %}
               <span class="read-receipt {{ 'read' if msg.is_read }}">
                 {% if msg.is_read %}✓✓{% else %}✓{% endif %}

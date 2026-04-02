@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Favorite Conversations - Panini Album{% endblock %}
+
+{% block content %}
+<section class="auth-section messages-section">
+  <div class="messages-container">
+
+    <!-- Header -->
+    <header class="messages-header">
+      <div class="header-row">
+        <h1 class="messages-title">⭐ Favorites</h1>
+        <a href="{{ url_for('auth.messages_inbox') }}" class="back-link">
+          ← Back to Messages
+        </a>
+      </div>
+      <p class="messages-subtitle">
+        Your favorite conversations
+      </p>
+    </header>
+
+    <!-- Favorited Conversations -->
+    {% if conversations %}
+      <div class="conversations-list">
+        {% for conv in conversations %}
+        <div class="conversation-card favorites-card" data-username="{{ conv.user.username }}">
+          <!-- Unfavorite Button (top-right) -->
+          <button class="unfavorite-btn" onclick="unfavoriteConversation(event, '{{ conv.user.username }}')"
+                  title="Remove from favorites">
+            ⭐
+          </button>
+
+          <a href="{{ url_for('auth.messages_conversation', username=conv.user.username) }}" class="conversation-content">
+            <!-- User Avatar -->
+            <div class="conversation-avatar">
+              {% if conv.user.photo_url %}
+                <img src="{{ conv.user.photo_url }}" alt="{{ conv.user.username }}">
+              {% else %}
+                <div class="avatar-placeholder">{{ conv.user.username[0]|upper }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Conversation Info -->
+            <div class="conversation-info">
+              <div class="conversation-header-row">
+                <h3 class="conversation-username">
+                  {{ conv.user.username }}
+                  {% if conv.user.star_count > 0 %}
+                    <span class="star-badge" title="{{ conv.user.star_count }} completed trades">
+                      ⭐ {{ conv.user.star_count }}
+                    </span>
+                  {% endif %}
+                </h3>
+                <span class="conversation-time">{{ conv.last_message.created_at|aus_time }}</span>
+              </div>
+
+              <p class="conversation-preview {{ 'unread' if conv.unread_count > 0 else '' }}">
+                {% if conv.last_message.sender_id == current_user.id %}
+                  <span class="you-prefix">You:</span>
+                {% endif %}
+                {{ conv.last_message.content[:80] }}{% if conv.last_message.content|length > 80 %}...{% endif %}
+              </p>
+
+              {% if conv.unread_count > 0 %}
+                <span class="unread-badge">{{ conv.unread_count }} new</span>
+              {% endif %}
+            </div>
+
+            <!-- Arrow -->
+            <div class="conversation-arrow">›</div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-messages">
+        <div class="empty-icon">⭐</div>
+        <h2>No Favorites Yet</h2>
+        <p>Star conversations in your messages to save them here!</p>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<style>
+/* Favorites Header */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.back-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.1);
+  transition: all 0.2s;
+}
+
+.back-link:hover {
+  background: rgba(56, 189, 248, 0.2);
+}
+
+/* Favorites Card */
+.favorites-card {
+  position: relative;
+}
+
+/* Unfavorite Button */
+.unfavorite-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 1;
+  color: #fbbf24;
+  transition: all 0.2s;
+  z-index: 10;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.unfavorite-btn:hover {
+  opacity: 0.7;
+  background: rgba(251, 191, 36, 0.1);
+  transform: scale(1.1);
+}
+
+/* Conversation Content Link */
+.conversation-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Unread Badge */
+.unread-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 50px;
+  margin-top: 0.5rem;
+}
+
+.you-prefix {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+</style>
+
+<script>
+// Unfavorite a conversation (remove from favorites page)
+function unfavoriteConversation(event, username) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  fetch('/auth/api/conversations/favorite', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({ username: username })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      // Remove the conversation card from the page
+      const card = event.target.closest('.conversation-card');
+      card.style.opacity = '0';
+      card.style.transform = 'translateX(20px)';
+      setTimeout(() => {
+        card.remove();
+        // Check if no more conversations
+        const remaining = document.querySelectorAll('.conversation-card');
+        if (remaining.length === 0) {
+          window.location.reload(); // Reload to show empty state
+        }
+      }, 300);
+    } else {
+      alert(data.error || 'Failed to remove from favorites');
+    }
+  })
+  .catch(err => {
+    console.error('Failed to unfavorite:', err);
+    alert('Failed to remove from favorites');
+  });
+}
+</script>
+{% endblock %}
