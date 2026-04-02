@@ -154,7 +154,7 @@ def create_app() -> Flask:
     # JINJA2 FILTERS
     # =========================================================================
 
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timezone
 
     @app.template_filter("aus_time")
     def aus_time_filter(dt, format_str="%b %d, %I:%M %p"):
