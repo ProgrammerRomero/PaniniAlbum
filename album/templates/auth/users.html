@@ -465,19 +465,19 @@
     {% if users_data %}
     <div class="users-grid">
       {% for data in users_data %}
-      <div class="user-card {{ 'top-match' if data.match_score > 0 else '' }}" data-user-index="{{ loop.index0 }}">
+      <div class="user-card {{ 'top-match' if data.can_receive_count > 0 else '' }}" data-user-index="{{ loop.index0 }}">
 
         <!-- Card Header with Rank -->
         <div class="user-card-header">
-          {% if loop.index <= 3 and data.match_score> 0 %}
+          {% if loop.index <= 3 and data.can_receive_count > 0 %}
             <div class="rank-badge rank-{{ loop.index }}">
               {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
             </div>
             {% endif %}
 
-            <div class="match-score {{ 'has-matches' if data.match_score > 0 else '' }}">
-              <span class="match-label">Trading Match</span>
-              <span class="match-value">{{ data.match_score }}</span>
+            <div class="match-score {{ 'has-matches' if data.can_receive_count > 0 else '' }}">
+              <span class="match-label">You Can Get</span>
+              <span class="match-value">{{ data.can_receive_count }}</span>
             </div>
         </div>
 

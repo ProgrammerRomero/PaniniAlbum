@@ -181,16 +181,30 @@
   // ===========================================================================
 
   /**
+   * Get CSRF token from meta tag for authenticated requests.
+   */
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+  }
+
+  /**
    * Save ownership status to appropriate storage.
    */
   async function saveOwnership(stickerId, isOwned) {
     if (isLoggedIn) {
       try {
-        await fetch("/api/sticker/own", {
+        const response = await fetch("/api/sticker/own", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCsrfToken(),
+          },
           body: JSON.stringify({ sticker_id: stickerId, is_owned: isOwned }),
         });
+        if (!response.ok) {
+          console.error("Failed to save sticker ownership:", response.status, await response.text());
+        }
       } catch (e) {
         console.warn("Failed to save to API:", e);
       }
@@ -211,11 +225,17 @@
   async function saveOwnershipBatch(stickerIds, isOwned) {
     if (isLoggedIn) {
       try {
-        await fetch("/api/sticker/own-batch", {
+        const response = await fetch("/api/sticker/own-batch", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCsrfToken(),
+          },
           body: JSON.stringify({ sticker_ids: stickerIds, is_owned: isOwned }),
         });
+        if (!response.ok) {
+          console.error("Failed to save batch sticker ownership:", response.status, await response.text());
+        }
       } catch (e) {
         console.warn("Failed to save batch to API:", e);
       }
@@ -236,11 +256,17 @@
   async function saveDuplicate(stickerId, count) {
     if (isLoggedIn) {
       try {
-        await fetch("/api/sticker/duplicate", {
+        const response = await fetch("/api/sticker/duplicate", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCsrfToken(),
+          },
           body: JSON.stringify({ sticker_id: stickerId, count: count }),
         });
+        if (!response.ok) {
+          console.error("Failed to save duplicate count:", response.status, await response.text());
+        }
       } catch (e) {
         console.warn("Failed to save duplicate to API:", e);
       }
@@ -517,8 +543,8 @@
   // ===========================================================================
 
   async function calculateStats() {
-    // Ensure album structure is loaded
-    await loadAlbumStructure();
+    // Ensure album structure and user data are loaded
+    await Promise.all([loadAlbumStructure(), loadUserData()]);
 
     let totalOwned = 0;
     let totalStickers = 0;
@@ -969,9 +995,10 @@
     // ALWAYS initialize user dropdown (works on all pages including profile)
     initUserDropdown();
 
-    // Pre-load album structure for stats modal (needed on all authenticated pages)
-    // This runs in parallel with other init tasks
+    // Pre-load album structure and user data for stats modal (needed on all authenticated pages)
+    // These run in parallel with other init tasks
     const albumStructurePromise = loadAlbumStructure();
+    const userDataPromise = isLoggedIn ? loadUserData() : Promise.resolve();
 
     // Logo click - go to cover page (not on login/register pages)
     const logoHomeLink = document.getElementById("logoHomeLink");
@@ -1016,8 +1043,8 @@
       return;
     }
 
-    // Load user data first (from database or localStorage)
-    await loadUserData();
+    // Wait for user data to be loaded (already started above)
+    await userDataPromise;
 
     // Check for initial team from redirect BEFORE setting page position
     const initialTeamEl = document.getElementById("initialTeamData");

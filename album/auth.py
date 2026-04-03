@@ -779,11 +779,15 @@ def users():
         # Calculate match score (higher = better trading partner)
         match_score = len(can_receive) + len(can_give)
 
+        # Calculate actual tradeable duplicates (extra copies beyond the first one)
+        # If user has 3 of a sticker, they have 2 duplicates for trade (3 - 1 = 2)
+        tradeable_duplicates = sum(max(0, count - 1) for count in user_duplicates.values())
+
         user_data.append({
             "user": user,
             "owned_count": len(user_owned),
             "missing_count": len(user_missing),
-            "duplicate_count": sum(user_duplicates.values()),
+            "duplicate_count": tradeable_duplicates,
             "can_receive": sorted(can_receive),
             "can_receive_count": len(can_receive),
             "can_give": sorted(can_give),
@@ -792,14 +796,18 @@ def users():
             "completion": round((len(user_owned) / len(all_sticker_ids)) * 100) if all_sticker_ids else 0,
         })
 
-    # Sort by match score (descending) - best trading partners first
-    user_data.sort(key=lambda x: (-x["match_score"], -x["completion"]))
+    # Sort by "you can get" count first (descending) - users with most stickers current user needs first
+    # Then by match score as secondary sort
+    user_data.sort(key=lambda x: (-x["can_receive_count"], -x["match_score"], -x["completion"]))
+
+    # Calculate current user's tradeable duplicates (extra copies beyond the first one)
+    current_tradeable_duplicates = sum(max(0, count - 1) for count in current_duplicates.values())
 
     return render_template(
         "auth/users.html",
         users_data=user_data,
         current_missing_count=len(current_missing),
-        current_duplicates_count=len(current_duplicates),
+        current_duplicates_count=current_tradeable_duplicates,
         country_codes=COUNTRY_CODES,
     )
 
