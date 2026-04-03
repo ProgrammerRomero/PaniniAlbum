@@ -159,76 +159,76 @@ def build_album_structure() -> List[PageDefinition]:
     # =========================================================================
 
     # GROUP A
-    pages.append(_team_page("USA", "United States", "CONCACAF", range(1, 21)))
-    pages.append(_team_page("SEN", "Senegal", "CAF", range(1, 21)))
-    pages.append(_team_page("AUT", "Austria", "UEFA", range(1, 21)))
-    pages.append(_team_page("NZL", "New Zealand", "OFC", range(1, 21)))
-
-    # GROUP B
-    pages.append(_team_page("ARG", "Argentina", "CONMEBOL", range(1, 21)))
-    pages.append(_team_page("CRC", "Costa Rica", "CONCACAF", range(1, 21)))
-    pages.append(_team_page("UKR", "Ukraine", "UEFA", range(1, 21)))
-    pages.append(_team_page("IRQ", "Iraq", "AFC", range(1, 21)))
-
-    # GROUP C
-    pages.append(_team_page("GER", "Germany", "UEFA", range(1, 21)))
-    pages.append(_team_page("ECU", "Ecuador", "CONMEBOL", range(1, 21)))
-    pages.append(_team_page("GHA", "Ghana", "CAF", range(1, 21)))
-    pages.append(_team_page("JPN", "Japan", "AFC", range(1, 21)))
-
-    # GROUP D
-    pages.append(_team_page("BRA", "Brazil", "CONMEBOL", range(1, 21)))
-    pages.append(_team_page("CMR", "Cameroon", "CAF", range(1, 21)))
-    pages.append(_team_page("DEN", "Denmark", "UEFA", range(1, 21)))
-    pages.append(_team_page("QAT", "Qatar", "AFC", range(1, 21)))
-
-    # GROUP E
     pages.append(_team_page("MEX", "Mexico", "CONCACAF", range(1, 21)))
-    pages.append(_team_page("URU", "Uruguay", "CONMEBOL", range(1, 21)))
-    pages.append(_team_page("SRB", "Serbia", "UEFA", range(1, 21)))
-    pages.append(_team_page("UZB", "Uzbekistan", "AFC", range(1, 21)))
-
-    # GROUP F
-    pages.append(_team_page("ENG", "England", "UEFA", range(1, 21)))
-    pages.append(_team_page("TUN", "Tunisia", "CAF", range(1, 21)))
-    pages.append(_team_page("JAM", "Jamaica", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("CZE", "Czech Republic", "UEFA", range(1, 21)))
+    pages.append(_team_page("RSA", "South Africa", "CAF", range(1, 21)))
     pages.append(_team_page("KOR", "South Korea", "AFC", range(1, 21)))
 
-    # GROUP G
-    pages.append(_team_page("ESP", "Spain", "UEFA", range(1, 21)))
-    pages.append(_team_page("COL", "Colombia", "CONMEBOL", range(1, 21)))
-    pages.append(_team_page("EGY", "Egypt", "CAF", range(1, 21)))
+    # GROUP B
     pages.append(_team_page("CAN", "Canada", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("BIH", "Bosnia and Herzegovina", "UEFA", range(1, 21)))
+    pages.append(_team_page("QAT", "Qatar", "AFC", range(1, 21)))
+    pages.append(_team_page("SUI", "Switzerland", "UEFA", range(1, 21)))
+
+    # GROUP C
+    pages.append(_team_page("BRA", "Brazil", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("HAI", "Haiti", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("MAR", "Morocco", "CAF", range(1, 21)))
+    pages.append(_team_page("SCO", "Scotland", "UEFA", range(1, 21)))
+
+    # GROUP D
+    pages.append(_team_page("USA", "United States", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("AUS", "Australia", "AFC", range(1, 21)))
+    pages.append(_team_page("PAR", "Paraguay", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("TUR", "Türkiye", "UEFA", range(1, 21)))
+
+    # GROUP E
+    pages.append(_team_page("GER", "Germany", "UEFA", range(1, 21)))
+    pages.append(_team_page("ECU", "Ecuador", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("CIV", "Ivory Coast", "CAF", range(1, 21)))
+    pages.append(_team_page("CUW", "Curaçao", "CONCACAF", range(1, 21)))
+
+    # GROUP F
+    pages.append(_team_page("NED", "Netherlands", "UEFA", range(1, 21)))
+    pages.append(_team_page("JPN", "Japan", "AFC", range(1, 21)))
+    pages.append(_team_page("SWE", "Sweden", "UEFA", range(1, 21)))
+    pages.append(_team_page("TUN", "Tunisia", "CAF", range(1, 21)))
+
+    # GROUP G
+    pages.append(_team_page("BEL", "Belgium", "UEFA", range(1, 21)))
+    pages.append(_team_page("EGY", "Egypt", "CAF", range(1, 21)))
+    pages.append(_team_page("IRN", "Iran", "AFC", range(1, 21)))
+    pages.append(_team_page("NZL", "New Zealand", "OFC", range(1, 21)))
 
     # GROUP H
-    pages.append(_team_page("FRA", "France", "UEFA", range(1, 21)))
-    pages.append(_team_page("PAR", "Paraguay", "CONMEBOL", range(1, 21)))
-    pages.append(_team_page("CIV", "Ivory Coast", "CAF", range(1, 21)))
-    pages.append(_team_page("UAE", "United Arab Emirates", "AFC", range(1, 21)))
+    pages.append(_team_page("ESP", "Spain", "UEFA", range(1, 21)))
+    pages.append(_team_page("URU", "Uruguay", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("KSA", "Saudi Arabia", "AFC", range(1, 21)))
+    pages.append(_team_page("CPV", "Cape Verde", "CAF", range(1, 21)))
 
     # GROUP I
-    pages.append(_team_page("NED", "Netherlands", "UEFA", range(1, 21)))
-    pages.append(_team_page("MAR", "Morocco", "CAF", range(1, 21)))
-    pages.append(_team_page("IRN", "Iran", "AFC", range(1, 21)))
-    pages.append(_team_page("PAN", "Panama", "CONCACAF", range(1, 21)))
+    pages.append(_team_page("FRA", "France", "UEFA", range(1, 21)))
+    pages.append(_team_page("NOR", "Norway", "UEFA", range(1, 21)))
+    pages.append(_team_page("SEN", "Senegal", "CAF", range(1, 21)))
+    pages.append(_team_page("IRQ", "Iraq", "AFC", range(1, 21)))
 
     # GROUP J
-    pages.append(_team_page("POR", "Portugal", "UEFA", range(1, 21)))
-    pages.append(_team_page("NGA", "Nigeria", "CAF", range(1, 21)))
-    pages.append(_team_page("AUS", "Australia", "AFC", range(1, 21)))
-    pages.append(_team_page("BIH", "Bosnia and Herzegovina", "UEFA", range(1, 21)))
+    pages.append(_team_page("ARG", "Argentina", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("AUT", "Austria", "UEFA", range(1, 21)))
+    pages.append(_team_page("ALG", "Algeria", "CAF", range(1, 21)))
+    pages.append(_team_page("JOR", "Jordan", "AFC", range(1, 21)))
 
     # GROUP K
-    pages.append(_team_page("BEL", "Belgium", "UEFA", range(1, 21)))
-    pages.append(_team_page("ALG", "Algeria", "CAF", range(1, 21)))
-    pages.append(_team_page("KSA", "Saudi Arabia", "AFC", range(1, 21)))
-    pages.append(_team_page("WAL", "Wales", "UEFA", range(1, 21)))
+    pages.append(_team_page("POR", "Portugal", "UEFA", range(1, 21)))
+    pages.append(_team_page("COL", "Colombia", "CONMEBOL", range(1, 21)))
+    pages.append(_team_page("UZB", "Uzbekistan", "AFC", range(1, 21)))
+    pages.append(_team_page("COD", "DR Congo", "CAF", range(1, 21)))
 
     # GROUP L
+    pages.append(_team_page("ENG", "England", "UEFA", range(1, 21)))
     pages.append(_team_page("CRO", "Croatia", "UEFA", range(1, 21)))
-    pages.append(_team_page("POL", "Poland", "UEFA", range(1, 21)))
-    pages.append(_team_page("SUI", "Switzerland", "UEFA", range(1, 21)))
-    pages.append(_team_page("KEN", "Kenya", "CAF", range(1, 21)))
+    pages.append(_team_page("GHA", "Ghana", "CAF", range(1, 21)))
+    pages.append(_team_page("PAN", "Panama", "CONCACAF", range(1, 21)))
 
     return pages
 
