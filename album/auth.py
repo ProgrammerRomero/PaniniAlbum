@@ -59,7 +59,7 @@ def register():
     Validation rules:
     - Username: 3-80 characters, alphanumeric + underscore
     - Email: Valid email format, unique
-    - Password: Minimum 6 characters
+    - Password: Minimum 8 characters, must contain uppercase, lowercase, and number
     """
     # Redirect already logged-in users to album
     if current_user.is_authenticated:
@@ -80,8 +80,16 @@ def register():
         if not email or not validate_email(email):
             errors.append("Please enter a valid email address.")
 
-        if not password or len(password) < 6:
-            errors.append("Password must be at least 6 characters.")
+        # Validate password complexity
+        if not password or len(password) < 8:
+            errors.append("Password must be at least 8 characters.")
+        else:
+            if not any(c.isupper() for c in password):
+                errors.append("Password must contain at least one uppercase letter.")
+            if not any(c.islower() for c in password):
+                errors.append("Password must contain at least one lowercase letter.")
+            if not any(c.isdigit() for c in password):
+                errors.append("Password must contain at least one number.")
 
         if password != confirm_password:
             errors.append("Passwords do not match.")
@@ -287,8 +295,16 @@ def reset_password():
 
         errors = []
 
-        if not password or len(password) < 6:
-            errors.append("Password must be at least 6 characters.")
+        # Validate password complexity
+        if not password or len(password) < 8:
+            errors.append("Password must be at least 8 characters.")
+        else:
+            if not any(c.isupper() for c in password):
+                errors.append("Password must contain at least one uppercase letter.")
+            if not any(c.islower() for c in password):
+                errors.append("Password must contain at least one lowercase letter.")
+            if not any(c.isdigit() for c in password):
+                errors.append("Password must contain at least one number.")
 
         if password != confirm_password:
             errors.append("Passwords do not match.")
