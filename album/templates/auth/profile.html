@@ -108,6 +108,14 @@
               </div>
 
               <div class="detail-item">
+                <span class="detail-label">City:</span>
+                <div class="detail-value">
+                  <span class="view-mode">{{ current_user.city or 'Not set' }}</span>
+                  <input type="text" name="city" class="edit-input" value="{{ current_user.city or '' }}" style="display: none;" placeholder="Enter your city">
+                </div>
+              </div>
+
+              <div class="detail-item">
                 <span class="detail-label">Member Since:</span>
                 <span class="detail-value">{{ current_user.created_at|aus_date }}</span>
               </div>

@@ -37,6 +37,7 @@ class User(UserMixin, db.Model):
 
     # Profile information
     country = db.Column(db.String(100), nullable=True)
+    city = db.Column(db.String(100), nullable=True)
 
     # Relationship to user's stickers
     stickers = db.relationship(

@@ -340,6 +340,7 @@ def profile():
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
         country = request.form.get("country", "").strip()
+        city = request.form.get("city", "").strip()
 
         errors = []
 
@@ -370,6 +371,10 @@ def profile():
         if country and country not in valid_countries:
             errors.append("Invalid country selected.")
 
+        # Validate city (optional, max 100 characters)
+        if city and len(city) > 100:
+            errors.append("City name must be less than 100 characters.")
+
         if errors:
             for error in errors:
                 flash(error, "error")
@@ -378,6 +383,7 @@ def profile():
             current_user.username = username
             current_user.email = email
             current_user.country = country if country else None
+            current_user.city = city if city else None
             db.session.commit()
             flash("Profile updated successfully!", "success")
 

@@ -7,11 +7,13 @@
 <script>
   (function () {
     // User data for search filtering - manually build serializable structure
-    // Searches by: trader name OR stickers in "You Can Get" (trader's duplicates = can_receive)
+    // Searches by: trader name, country, city OR stickers in "You Can Get" (trader's duplicates = can_receive)
     const usersData = [
       {% for data in users_data %}
     {
     username: {{ data.user.username | tojson }},
+    country: {{ data.user.country | tojson }},
+    city: {{ data.user.city | tojson }},
     canReceive: {{ data.can_receive | tojson }}
     }{% if not loop.last %},{% endif %}
       {% endfor %}
@@ -45,10 +47,12 @@
         if (!userData) return;
 
         const usernameMatch = userData.username.toLowerCase().includes(normalizedQuery);
+        const countryMatch = userData.country && userData.country.toLowerCase().includes(normalizedQuery);
+        const cityMatch = userData.city && userData.city.toLowerCase().includes(normalizedQuery);
         // Check if any sticker ID contains the search query (partial match)
         const stickerMatch = userData.canReceive.some(s => s.toLowerCase().includes(normalizedQuery));
 
-        if (usernameMatch || stickerMatch) {
+        if (usernameMatch || countryMatch || cityMatch || stickerMatch) {
           // Reset to default display (grid item behavior)
           card.style.display = '';
           visibleCount++;
@@ -404,8 +408,20 @@
       <div class="header-top">
         <h1 class="users-title">👥 Other Collectors</h1>
         <div class="search-container">
+          <!-- Info tooltip -->
+          <div class="search-info-wrapper">
+            <span class="search-info-icon" title="">ℹ️</span>
+            <div class="search-info-tooltip">
+              <strong>Search Guide:</strong><br>
+              You can search by:<br>
+              • User Names (e.g., "john")<br>
+              • Country (e.g., "Australia")<br>
+              • City (e.g., "Sydney")<br>
+              • Stickers from "You Can Get" (e.g., "bra-17")
+            </div>
+          </div>
           <input type="text" id="userSearch" class="search-input"
-            placeholder="Search by name or sticker (e.g., bra-17)..." autocomplete="off">
+            placeholder="Search by name, country, city or sticker (e.g., bra-17)..." autocomplete="off">
           <button class="search-btn" onclick="clearSearch()" title="Clear search">✕</button>
         </div>
       </div>
@@ -490,6 +506,12 @@
               <img src="https://flagcdn.com/w20/{{ country_codes.get(data.user.country, '').lower() }}.png"
                 alt="{{ data.user.country }}" class="user-country-flag" onerror="this.style.display='none'">
               <span class="user-country-name">{{ data.user.country }}</span>
+            </div>
+            {% endif %}
+            {% if data.user.city %}
+            <div class="user-city">
+              <span class="city-icon">📍</span>
+              <span class="city-name">{{ data.user.city }}</span>
             </div>
             {% endif %}
           </div>
@@ -768,6 +790,60 @@
     right: 0.5rem;
     top: 50%;
     transform: translateY(-50%);
+  }
+
+  /* Search Info Icon and Tooltip */
+  .search-info-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .search-info-icon {
+    font-size: 1.2rem;
+    cursor: help;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    user-select: none;
+  }
+
+  .search-info-icon:hover {
+    opacity: 1;
+  }
+
+  .search-info-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: var(--color-text);
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: opacity 0.2s, visibility 0.2s;
+    margin-top: 0.5rem;
+  }
+
+  .search-info-tooltip::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent rgba(56, 189, 248, 0.3) transparent;
+  }
+
+  .search-info-wrapper:hover .search-info-tooltip {
+    visibility: visible;
+    opacity: 1;
   }
 
   .search-input {
@@ -1054,6 +1130,24 @@
   .user-country-name {
     font-size: 0.75rem;
     color: var(--color-text-muted);
+  }
+
+  /* User City Display */
+  .user-city {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.15rem;
+  }
+
+  .city-icon {
+    font-size: 0.7rem;
+  }
+
+  .city-name {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    font-style: italic;
   }
 
   /* Collection Stats - Larger */
