@@ -449,8 +449,8 @@ def health_check():
         return jsonify(status), 503
 
     # Memory usage (approximate)
-    import psutil
     try:
+        import psutil
         process = psutil.Process()
         mem_info = process.memory_info()
         status["memory_mb"] = round(mem_info.rss / 1024 / 1024, 2)
