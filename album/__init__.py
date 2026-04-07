@@ -247,6 +247,44 @@ def create_app() -> Flask:
         # Create all tables defined in models.py
         db.create_all()
 
+        # Auto-migrate: Add missing columns that were added to models
+        # but may not exist in production database
+        from sqlalchemy import text
+
+        try:
+            # Check if city column exists in users table (PostgreSQL syntax)
+            result = db.session.execute(text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'users' AND column_name = 'city'"
+            )).fetchone()
+
+            if not result:
+                # Try to add city column for PostgreSQL
+                db.session.execute(text(
+                    "ALTER TABLE users ADD COLUMN city VARCHAR(100)"
+                ))
+                db.session.commit()
+                app.logger.info("Auto-migrated: Added city column to users table")
+
+        except Exception as e:
+            # If information_schema doesn't exist (SQLite), try PRAGMA
+            try:
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                columns = [col['name'] for col in inspector.get_columns('users')]
+
+                if 'city' not in columns:
+                    db.session.execute(text(
+                        "ALTER TABLE users ADD COLUMN city VARCHAR(100)"
+                    ))
+                    db.session.commit()
+                    app.logger.info("Auto-migrated: Added city column to users table (SQLite)")
+
+            except Exception as e2:
+                # Column may already exist or other error - log but don't crash
+                app.logger.warning(f"Could not auto-migrate city column: {e2}")
+                db.session.rollback()
+
     # =========================================================================
     # REGISTER BLUEPRINTS
     # =========================================================================
