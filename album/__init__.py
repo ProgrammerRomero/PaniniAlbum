@@ -344,6 +344,33 @@ def create_app() -> Flask:
             app.logger.warning(f"Could not create tables: {e}")
             db.session.rollback()
 
+        # Fix unique constraint on user_stickers table (PostgreSQL)
+        try:
+            # Check if the old constraint exists (without album_version_id)
+            result = db.session.execute(text("""
+                SELECT conname FROM pg_constraint
+                WHERE conrelid = 'user_stickers'::regclass
+                AND contype = 'u'
+                AND conname LIKE '%user_sticker%'
+            """)).fetchone()
+
+            if result and 'version' not in result[0].lower():
+                # Drop old constraint and add new one
+                old_constraint = result[0]
+                db.session.execute(text(f"ALTER TABLE user_stickers DROP CONSTRAINT {old_constraint}"))
+                db.session.execute(text("""
+                    ALTER TABLE user_stickers
+                    ADD CONSTRAINT unique_user_sticker_version
+                    UNIQUE (user_id, sticker_id, album_version_id)
+                """))
+                db.session.commit()
+                app.logger.info(f"Auto-migrated: Fixed unique constraint from {old_constraint} to unique_user_sticker_version")
+
+        except Exception as e:
+            # Constraint may already be correct or other error
+            app.logger.debug(f"Constraint check/fix skipped: {e}")
+            db.session.rollback()
+
     # =========================================================================
     # REGISTER BLUEPRINTS
     # =========================================================================
