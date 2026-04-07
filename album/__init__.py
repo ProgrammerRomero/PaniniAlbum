@@ -247,43 +247,95 @@ def create_app() -> Flask:
         # Create all tables defined in models.py
         db.create_all()
 
-        # Auto-migrate: Add missing columns that were added to models
-        # but may not exist in production database
-        from sqlalchemy import text
+        # Auto-migrate: Add missing columns and tables for multi-album feature
+        from sqlalchemy import text, inspect
 
-        try:
-            # Check if city column exists in users table (PostgreSQL syntax)
-            result = db.session.execute(text(
-                "SELECT column_name FROM information_schema.columns "
-                "WHERE table_name = 'users' AND column_name = 'city'"
-            )).fetchone()
-
-            if not result:
-                # Try to add city column for PostgreSQL
-                db.session.execute(text(
-                    "ALTER TABLE users ADD COLUMN city VARCHAR(100)"
-                ))
-                db.session.commit()
-                app.logger.info("Auto-migrated: Added city column to users table")
-
-        except Exception as e:
-            # If information_schema doesn't exist (SQLite), try PRAGMA
+        def column_exists(table_name, column_name):
+            """Check if a column exists in a table."""
             try:
-                from sqlalchemy import inspect
-                inspector = inspect(db.engine)
-                columns = [col['name'] for col in inspector.get_columns('users')]
+                # Try PostgreSQL information_schema first
+                result = db.session.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = :table AND column_name = :column"
+                ), {"table": table_name, "column": column_name}).fetchone()
+                return result is not None
+            except:
+                # Fall back to SQLAlchemy inspector (works for SQLite)
+                try:
+                    inspector = inspect(db.engine)
+                    columns = [col['name'] for col in inspector.get_columns(table_name)]
+                    return column_name in columns
+                except:
+                    return False
 
-                if 'city' not in columns:
+        def add_column(table_name, column_name, data_type):
+            """Add a column if it doesn't exist."""
+            if not column_exists(table_name, column_name):
+                try:
                     db.session.execute(text(
-                        "ALTER TABLE users ADD COLUMN city VARCHAR(100)"
+                        f"ALTER TABLE {table_name} ADD COLUMN {column_name} {data_type}"
                     ))
                     db.session.commit()
-                    app.logger.info("Auto-migrated: Added city column to users table (SQLite)")
+                    app.logger.info(f"Auto-migrated: Added {column_name} column to {table_name} table")
+                    return True
+                except Exception as e:
+                    app.logger.warning(f"Could not add {column_name} column: {e}")
+                    db.session.rollback()
+                    return False
+            return True
 
-            except Exception as e2:
-                # Column may already exist or other error - log but don't crash
-                app.logger.warning(f"Could not auto-migrate city column: {e2}")
-                db.session.rollback()
+        # Add missing columns to users table
+        add_column("users", "city", "VARCHAR(100)")
+        add_column("users", "has_selected_version", "BOOLEAN DEFAULT FALSE")
+
+        # Add missing column to user_stickers table
+        add_column("user_stickers", "album_version_id", "INTEGER")
+
+        # Create album_versions table if it doesn't exist
+        try:
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+
+            if 'album_versions' not in tables:
+                db.session.execute(text("""
+                    CREATE TABLE album_versions (
+                        id SERIAL PRIMARY KEY,
+                        code VARCHAR(20) UNIQUE NOT NULL,
+                        name VARCHAR(50) NOT NULL,
+                        display_name VARCHAR(100),
+                        theme_css_class VARCHAR(50),
+                        is_active BOOLEAN DEFAULT TRUE
+                    )
+                """))
+                db.session.commit()
+                app.logger.info("Auto-migrated: Created album_versions table")
+
+                # Insert default versions
+                db.session.execute(text("""
+                    INSERT INTO album_versions (code, name, display_name, theme_css_class, is_active) VALUES
+                    ('gold', 'Gold', 'Gold Edition', 'theme-gold', TRUE),
+                    ('blue', 'Blue', 'Blue Edition', 'theme-blue', TRUE),
+                    ('orange', 'Orange', 'Orange Edition', 'theme-orange', TRUE)
+                """))
+                db.session.commit()
+                app.logger.info("Auto-migrated: Inserted default album versions")
+
+            if 'user_albums' not in tables:
+                db.session.execute(text("""
+                    CREATE TABLE user_albums (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        album_version_id INTEGER NOT NULL,
+                        is_active BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+                db.session.commit()
+                app.logger.info("Auto-migrated: Created user_albums table")
+
+        except Exception as e:
+            app.logger.warning(f"Could not create tables: {e}")
+            db.session.rollback()
 
     # =========================================================================
     # REGISTER BLUEPRINTS
