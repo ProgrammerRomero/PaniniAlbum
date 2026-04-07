@@ -355,13 +355,20 @@ def update_sticker_ownership():
             blue = AlbumVersion.query.filter_by(code="blue").first()
             version_id = blue.id if blue else 1
 
-    # Validate user owns this album version
+    # Ensure user has this album version (auto-create if missing)
     user_album = UserAlbum.query.filter_by(
         user_id=current_user.id,
         album_version_id=version_id
     ).first()
     if not user_album:
-        return jsonify({"error": "User does not have this album version"}), 403
+        # Auto-create UserAlbum entry for existing users
+        user_album = UserAlbum(
+            user_id=current_user.id,
+            album_version_id=version_id,
+            is_active=True
+        )
+        db.session.add(user_album)
+        db.session.commit()
 
     # Find or create the sticker record
     user_sticker = UserSticker.query.filter_by(
@@ -431,13 +438,20 @@ def update_sticker_ownership_batch():
             blue = AlbumVersion.query.filter_by(code="blue").first()
             version_id = blue.id if blue else 1
 
-    # Validate user owns this album version
+    # Ensure user has this album version (auto-create if missing)
     user_album = UserAlbum.query.filter_by(
         user_id=current_user.id,
         album_version_id=version_id
     ).first()
     if not user_album:
-        return jsonify({"error": "User does not have this album version"}), 403
+        # Auto-create UserAlbum entry for existing users
+        user_album = UserAlbum(
+            user_id=current_user.id,
+            album_version_id=version_id,
+            is_active=True
+        )
+        db.session.add(user_album)
+        db.session.commit()
 
     # Process all stickers in a single transaction
     for sticker_id in sticker_ids:
@@ -511,13 +525,20 @@ def update_sticker_duplicate():
             blue = AlbumVersion.query.filter_by(code="blue").first()
             version_id = blue.id if blue else 1
 
-    # Validate user owns this album version
+    # Ensure user has this album version (auto-create if missing)
     user_album = UserAlbum.query.filter_by(
         user_id=current_user.id,
         album_version_id=version_id
     ).first()
     if not user_album:
-        return jsonify({"error": "User does not have this album version"}), 403
+        # Auto-create UserAlbum entry for existing users
+        user_album = UserAlbum(
+            user_id=current_user.id,
+            album_version_id=version_id,
+            is_active=True
+        )
+        db.session.add(user_album)
+        db.session.commit()
 
     # Find or create the sticker record
     user_sticker = UserSticker.query.filter_by(
