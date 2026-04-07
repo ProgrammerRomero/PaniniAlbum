@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Select Album Version - Panini Album{% endblock %}
+
+{% block content %}
+<section class="version-selection-section">
+  <div class="version-selection-container">
+    <header class="version-selection-header">
+      <h1 class="version-selection-title">Choose Your Album Edition</h1>
+      <p class="version-selection-subtitle">
+        Select which version of the FIFA World Cup 2026 album you're collecting.
+        You can add more editions later from your profile.
+      </p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form class="version-selection-form" method="POST" action="{{ url_for('auth.select_version') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="version-cards">
+        {% for version in versions %}
+        <div class="version-card {{ version.theme_css_class }}" data-version-id="{{ version.id }}">
+          <div class="version-preview">
+            <div class="preview-sticker {{ version.theme_css_class }}">
+              <div class="sticker-inner-preview {{ version.theme_css_class }}">
+                <span class="sticker-number">1</span>
+                <span class="sticker-team">ARG</span>
+              </div>
+            </div>
+          </div>
+          <div class="version-info">
+            <h3 class="version-name">{{ version.display_name }}</h3>
+            <p class="version-description">
+              {% if version.code == 'gold' %}
+                Premium edition with elegant gold theme
+              {% elif version.code == 'blue' %}
+                Classic edition with blue theme
+              {% elif version.code == 'orange' %}
+                Vibrant edition with warm theme
+              {% endif %}
+            </p>
+          </div>
+          <div class="version-actions">
+            {% if version.id in user_version_ids %}
+              <button type="submit" name="version_id" value="{{ version.id }}" class="btn btn-primary btn-block">
+                {% if version.id == active_version_id %}Currently Active{% else %}Switch to This Version{% endif %}
+              </button>
+            {% else %}
+              <button type="submit" name="version_id" value="{{ version.id }}" class="btn btn-primary btn-block">
+                Select This Edition
+              </button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+</section>
+
+<style>
+.version-selection-section {
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.version-selection-container {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.version-selection-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.version-selection-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.version-selection-subtitle {
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.version-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.version-card {
+  background: var(--color-bg-elevated);
+  border: 2px solid var(--color-border);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.version-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.version-card.theme-gold {
+  border-color: rgba(212, 168, 83, 0.35);
+  background: linear-gradient(135deg, rgba(212, 168, 83, 0.12), rgba(166, 124, 58, 0.06));
+}
+
+.version-card.theme-gold:hover {
+  border-color: rgba(212, 168, 83, 0.7);
+  box-shadow: 0 20px 50px rgba(212, 168, 83, 0.25);
+}
+
+.version-card.theme-blue {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(14, 165, 233, 0.06));
+}
+
+.version-card.theme-blue:hover {
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 20px 50px rgba(56, 189, 248, 0.25);
+}
+
+.version-card.theme-orange {
+  border-color: rgba(232, 122, 61, 0.35);
+  background: linear-gradient(135deg, rgba(232, 122, 61, 0.12), rgba(196, 90, 40, 0.06));
+}
+
+.version-card.theme-orange:hover {
+  border-color: rgba(232, 122, 61, 0.7);
+  box-shadow: 0 20px 50px rgba(232, 122, 61, 0.25);
+}
+
+.version-preview {
+  margin-bottom: 1.5rem;
+}
+
+.preview-sticker {
+  width: 100px;
+  height: 140px;
+  margin: 0 auto;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.sticker-inner-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  position: relative;
+}
+
+.sticker-inner-preview.theme-gold {
+  background: linear-gradient(135deg, #e6c876, #d4a853);
+  border: 2px solid rgba(212, 168, 83, 0.6);
+  color: #221a10;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.sticker-inner-preview.theme-blue {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  border: 2px solid rgba(56, 189, 248, 0.6);
+  color: #0f172a;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.sticker-inner-preview.theme-orange {
+  background: linear-gradient(135deg, #ff9a6b, #e87a3d);
+  border: 2px solid rgba(232, 122, 61, 0.6);
+  color: #261810;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.sticker-number {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.sticker-team {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-top: 0.25rem;
+}
+
+.version-info {
+  margin-bottom: 1.5rem;
+}
+
+.version-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+}
+
+.version-description {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+}
+
+.version-actions .btn {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.flash-messages {
+  max-width: 600px;
+  margin: 0 auto 2rem;
+}
+
+@media (max-width: 768px) {
+  .version-selection-title {
+    font-size: 2rem;
+  }
+
+  .version-cards {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .version-card {
+    padding: 1.5rem;
+  }
+}
+</style>
+
+<script>
+  // Add click handler for cards to select the button
+  document.querySelectorAll('.version-card').forEach(card => {
+    card.addEventListener('click', function(e) {
+      // Don't trigger if clicking the button directly
+      if (e.target.tagName === 'BUTTON') return;
+
+      const button = this.querySelector('button[name="version_id"]');
+      if (button) {
+        button.click();
+      }
+    });
+  });
+</script>
+{% endblock %}

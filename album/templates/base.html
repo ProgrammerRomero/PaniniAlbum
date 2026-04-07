@@ -9,9 +9,12 @@
 
   <!-- Main stylesheet for layout, colour palette and animations -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  <!-- Theme-specific styles for multi-album versions -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}" />
 </head>
 
-<body>
+<body {% if current_version %}class="{{ current_version.theme_css_class }}"{% endif %} data-theme="{{ current_version.code if current_version else 'blue' }}" {% if current_version %}data-version-id="{{ current_version.id }}"{% endif %}>
   <header class="app-header">
     <nav class="navbar">
       <div class="navbar-left">
@@ -35,19 +38,59 @@
 
       <div class="navbar-center">
         {% if request.endpoint not in ('auth.login', 'auth.register', 'auth.forgot_password', 'auth.reset_password') %}
-        <!-- Teams dropdown – populated from Flask context -->
-        <div class="dropdown" id="teamsDropdown">
-          <button class="dropdown-toggle" type="button">
-            Teams
-            <span class="dropdown-caret">▼</span>
-          </button>
-          <div class="dropdown-menu">
-            {% for code, page in team_pages.items()|sort %}
-            <button class="dropdown-item" type="button" data-target-page-id="{{ page.id }}">
-              {{ code }} – {{ page.title }}
+        <div class="navbar-nav-group">
+          <!-- Teams dropdown – populated from Flask context -->
+          <div class="dropdown" id="teamsDropdown">
+            <button class="dropdown-toggle nav-btn" type="button">
+              <span class="nav-btn-icon">🏆</span>
+              <span class="nav-btn-text">Teams</span>
+              <span class="dropdown-caret">▼</span>
             </button>
-            {% endfor %}
+            <div class="dropdown-menu">
+              {% for code, page in team_pages.items()|sort %}
+              <button class="dropdown-item" type="button" data-target-page-id="{{ page.id }}">
+                {{ code }} – {{ page.title }}
+              </button>
+              {% endfor %}
+            </div>
           </div>
+
+          <!--
+              VERSION SWITCHER DROPDOWN (when user has multiple versions)
+          -->
+          {% if current_user.is_authenticated %}
+          {% set user_versions = current_user.albums %}
+          {% if user_versions | length > 1 %}
+          {% set active_version = user_versions | selectattr("is_active") | first %}
+          <div class="dropdown version-dropdown" id="versionDropdown">
+            <button class="dropdown-toggle version-toggle nav-btn {{ active_version.version.theme_css_class if active_version else 'theme-blue' }}" type="button">
+              <span class="nav-btn-icon">📓</span>
+              <span class="nav-btn-text">{{ active_version.version.name if active_version else 'Euro' }}</span>
+              <span class="dropdown-caret">▼</span>
+            </button>
+            <div class="dropdown-menu version-menu">
+              {% for album in user_versions %}
+              <button class="dropdown-item version-item {{ 'active' if album.is_active else '' }}"
+                      type="button"
+                      data-version-code="{{ album.version.code }}"
+                      onclick="switchToVersion('{{ album.version.code }}')">
+                <span class="version-color-dot {{ album.version.theme_css_class }}"></span>
+                <span class="version-name">{{ album.version.display_name }}</span>
+                {% if album.is_active %}
+                <span class="version-active-indicator">✓</span>
+                {% endif %}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+          {% elif user_versions | length == 1 %}
+          {% set active_version = user_versions | first %}
+          <span class="nav-btn version-badge {{ active_version.version.theme_css_class if active_version else 'theme-blue' }}" style="cursor: default;">
+            <span class="nav-btn-icon">📓</span>
+            <span class="nav-btn-text">{{ active_version.version.name if active_version else 'Euro' }}</span>
+          </span>
+          {% endif %}
+          {% endif %}
         </div>
         {% endif %}
       </div>
@@ -57,18 +100,20 @@
         <!--
             STATS BUTTON:
             Opens a modal that displays collection statistics
-          -->
-        <button id="statsBtn" class="btn-secondary" type="button">
-          📊 Stats
+        -->
+        <button id="statsBtn" class="nav-btn" type="button" title="Collection Statistics">
+          <span class="nav-btn-icon">📊</span>
+          <span class="nav-btn-text">Stats</span>
         </button>
 
         <!--
             EXPORT DROPDOWN:
             Contains export options for duplicates and missing stickers
-          -->
+        -->
         <div class="dropdown export-dropdown" id="exportDropdown">
-          <button class="dropdown-toggle export-toggle" type="button">
-            📁 Export
+          <button class="dropdown-toggle nav-btn" type="button">
+            <span class="nav-btn-icon">📁</span>
+            <span class="nav-btn-text">Export</span>
             <span class="dropdown-caret">▼</span>
           </button>
           <div class="dropdown-menu export-menu">
@@ -84,10 +129,11 @@
         <!--
             USER MENU (when logged in)
             Shows username with dropdown to profile and logout
-          -->
+        -->
         <div class="dropdown user-dropdown" id="userDropdown">
-          <button class="dropdown-toggle user-toggle" type="button">
-            👤 {{ current_user.username }}
+          <button class="dropdown-toggle nav-btn user-btn" type="button">
+            <span class="nav-btn-icon">👤</span>
+            <span class="nav-btn-text">{{ current_user.username }}</span>
             <span class="dropdown-caret">▼</span>
           </button>
           <div class="dropdown-menu user-menu">
@@ -102,20 +148,20 @@
         <!--
             MESSAGES ICON (at the far right)
             Just the icon with badge showing unread count
-          -->
-        <a href="{{ url_for('auth.messages_inbox') }}" class="messages-icon-btn" id="messagesBtn" title="Messages">
-          💬
+        -->
+        <a href="{{ url_for('auth.messages_inbox') }}" class="nav-btn messages-icon-btn" id="messagesBtn" title="Messages">
+          <span class="nav-btn-icon">💬</span>
           <span class="messages-badge" id="messagesBadge" style="display: none;">0</span>
         </a>
 
         {% else %}
         <!--
             LOGIN/REGISTER LINKS (when not logged in)
-          -->
-        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">
+        -->
+        <a href="{{ url_for('auth.login') }}" class="nav-btn btn-secondary">
           Log In
         </a>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+        <a href="{{ url_for('auth.register') }}" class="nav-btn btn-primary">
           Register
         </a>
         {% endif %}
@@ -202,6 +248,51 @@
 
     // Update every 30 seconds
     setInterval(updateUnreadCount, 30000);
+
+    // Version switching function
+    async function switchToVersion(versionCode) {
+      try {
+        const response = await fetch('/api/user/switch-version', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ version_code: versionCode })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            // Reload page to apply new theme
+            window.location.reload();
+          }
+        } else {
+          console.error('Failed to switch version:', await response.text());
+        }
+      } catch (e) {
+        console.error('Error switching version:', e);
+      }
+    }
+
+    // Initialize version dropdown toggle
+    const versionDropdown = document.getElementById('versionDropdown');
+    if (versionDropdown) {
+      const versionToggle = versionDropdown.querySelector('.version-toggle');
+      const versionMenu = versionDropdown.querySelector('.version-menu');
+
+      versionToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        versionDropdown.classList.toggle('open');
+      });
+
+      // Close when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!versionDropdown.contains(e.target)) {
+          versionDropdown.classList.remove('open');
+        }
+      });
+    }
   </script>
   {% endif %}
 

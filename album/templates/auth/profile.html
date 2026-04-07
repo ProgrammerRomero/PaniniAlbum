@@ -160,6 +160,57 @@
           </div>
         </div>
 
+        <!-- Album Versions -->
+        <div class="profile-card">
+          <h2 class="card-title">📓 My Album Editions</h2>
+
+          <!-- Current Active Version -->
+          <div class="current-version-display">
+            <span class="version-label">Currently Collecting:</span>
+            <span class="version-badge {{ active_album.version.theme_css_class if active_album else 'theme-blue' }}">
+              {{ active_album.version.display_name if active_album else 'Blue Edition' }}
+            </span>
+          </div>
+
+          <!-- Version Selection Form -->
+          <form method="POST" action="{{ url_for('auth.manage_versions') }}" class="version-form" id="versionForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" id="versionAction" value="add">
+
+            <div class="version-checkboxes">
+              {% for version in all_versions %}
+              <label class="version-checkbox-label {{ version.theme_css_class }} {{ 'has-version' if version.id in user_version_ids else '' }}" data-version-id="{{ version.id }}">
+                <input type="checkbox"
+                       name="version_ids"
+                       value="{{ version.id }}"
+                       data-original-state="{{ 'checked' if version.id in user_version_ids else 'unchecked' }}"
+                       {{ 'checked' if version.id in user_version_ids else '' }}>
+                <div class="version-checkbox-content">
+                  <span class="version-checkbox-name">{{ version.display_name }}</span>
+                  <span class="version-checkbox-status" id="status-{{ version.id }}">
+                    {% if version.id in user_version_ids %}
+                      ✓ Active - Click to remove
+                    {% else %}
+                      Click to add
+                    {% endif %}
+                  </span>
+                </div>
+              </label>
+              {% endfor %}
+            </div>
+
+            <div class="version-form-actions">
+              <button type="submit" class="btn btn-primary" id="saveVersionsBtn" style="display: none;">
+                Save Changes
+              </button>
+            </div>
+          </form>
+
+          <p class="version-hint">
+            Toggle editions on/off to add or remove them from your collection. Each edition has its own separate sticker collection.
+          </p>
+        </div>
+
         <!-- Security Section -->
         <div class="profile-card">
           <h2 class="card-title">🔒 Security</h2>
@@ -601,10 +652,228 @@ window.addEventListener('beforeunload', function(e) {
     return e.returnValue;
   }
 });
+
+// Album Version Selection
+const versionCheckboxes = document.querySelectorAll('input[name="version_ids"]');
+const saveVersionsBtn = document.getElementById('saveVersionsBtn');
+
+versionCheckboxes.forEach(checkbox => {
+  checkbox.addEventListener('change', function() {
+    const versionId = this.value;
+    const label = document.querySelector(`label[data-version-id="${versionId}"]`);
+    const statusSpan = document.getElementById(`status-${versionId}`);
+    const originalState = this.getAttribute('data-original-state');
+    const isNowChecked = this.checked;
+
+    // Update visual state and status text
+    if (isNowChecked) {
+      label.classList.add('has-version');
+      statusSpan.textContent = originalState === 'checked' ? '✓ Active - Click to remove' : 'Will be added';
+    } else {
+      label.classList.remove('has-version');
+      statusSpan.textContent = originalState === 'checked' ? 'Will be removed' : 'Click to add';
+    }
+
+    // Check if any changes have been made
+    const hasChanges = Array.from(versionCheckboxes).some(cb => {
+      const currentState = cb.checked ? 'checked' : 'unchecked';
+      const origState = cb.getAttribute('data-original-state');
+      return currentState !== origState;
+    });
+
+    // Show/hide save button based on changes
+    if (hasChanges) {
+      saveVersionsBtn.style.display = 'inline-block';
+    } else {
+      saveVersionsBtn.style.display = 'none';
+    }
+  });
+});
 </script>
 
 <style>
 /* Profile Page Specific Styles */
+
+/* Album Versions Section */
+.current-version-display {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.version-label {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.current-version-display .version-badge.theme-gold {
+  background: linear-gradient(135deg, rgba(212, 168, 83, 0.22), rgba(212, 168, 83, 0.1));
+  border: 1px solid rgba(212, 168, 83, 0.55);
+  color: #f5d78e;
+}
+
+.current-version-display .version-badge.theme-blue {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(56, 189, 248, 0.1));
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  color: #7dd3fc;
+}
+
+.current-version-display .version-badge.theme-orange {
+  background: linear-gradient(135deg, rgba(232, 122, 61, 0.22), rgba(232, 122, 61, 0.1));
+  border: 1px solid rgba(232, 122, 61, 0.55);
+  color: #ff9a6b;
+}
+
+/* Version Checkboxes */
+.version-form {
+  margin-bottom: 1rem;
+}
+
+.version-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.version-checkbox-label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.version-checkbox-label:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.version-checkbox-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.version-checkbox-label.theme-gold {
+  border-color: rgba(212, 168, 83, 0.25);
+}
+
+.version-checkbox-label.theme-gold:hover {
+  border-color: rgba(212, 168, 83, 0.6);
+  box-shadow: 0 4px 18px rgba(212, 168, 83, 0.15);
+}
+
+.version-checkbox-label.theme-blue {
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.version-checkbox-label.theme-blue:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.15);
+}
+
+.version-checkbox-label.theme-orange {
+  border-color: rgba(232, 122, 61, 0.25);
+}
+
+.version-checkbox-label.theme-orange:hover {
+  border-color: rgba(232, 122, 61, 0.6);
+  box-shadow: 0 4px 18px rgba(232, 122, 61, 0.15);
+}
+
+.version-checkbox-label.has-version {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.version-checkbox-label.has-version::before {
+  content: '✓';
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+}
+
+/* State indicators for pending changes */
+.version-checkbox-label.pending-add {
+  border-style: dashed;
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.version-checkbox-label.pending-remove {
+  border-style: dashed;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.version-checkbox-label.pending-add .version-checkbox-status,
+.version-checkbox-label.pending-remove .version-checkbox-status {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.version-checkbox-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.version-checkbox-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.version-checkbox-status {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.version-checkbox-label.has-version .version-checkbox-status {
+  color: #22c55e;
+}
+
+.version-form-actions {
+  text-align: center;
+}
+
+.version-hint {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
 
 .profile-container {
   max-width: 800px;

@@ -53,6 +53,9 @@ class User(UserMixin, db.Model):
     # Profile photo URL
     photo_url = db.Column(db.String(255), nullable=True)
 
+    # Album version selection flag
+    has_selected_version = db.Column(db.Boolean, default=False)
+
     # Relationships for messages
     sent_messages = db.relationship(
         "Message",
@@ -106,6 +109,69 @@ class User(UserMixin, db.Model):
     def __repr__(self) -> str:
         return f"<User {self.username}>"
 
+    def get_active_album_version(self):
+        """Get currently selected album version."""
+        active = UserAlbum.query.filter_by(
+            user_id=self.id, is_active=True
+        ).first()
+        return active.version if active else None
+
+    def has_album_version(self, version_id):
+        """Check if user has a specific album version."""
+        return UserAlbum.query.filter_by(
+            user_id=self.id, album_version_id=version_id
+        ).first() is not None
+
+
+class AlbumVersion(db.Model):
+    """
+    Represents an album edition/version (Gold, Blue, Orange).
+    """
+    __tablename__ = "album_versions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), unique=True, nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+    display_name = db.Column(db.String(100))
+    theme_css_class = db.Column(db.String(50))
+    is_active = db.Column(db.Boolean, default=True)
+
+    def __init__(self, code: str, name: str, display_name: str = None, theme_css_class: str = None):
+        self.code = code
+        self.name = name
+        self.display_name = display_name or name
+        self.theme_css_class = theme_css_class
+
+    def __repr__(self) -> str:
+        return f"<AlbumVersion {self.code}>"
+
+
+class UserAlbum(db.Model):
+    """
+    Tracks which album versions a user has selected/collects.
+    """
+    __tablename__ = "user_albums"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    album_version_id = db.Column(db.Integer, db.ForeignKey("album_versions.id"), nullable=False)
+    is_active = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    user = db.relationship("User", backref="albums")
+    version = db.relationship("AlbumVersion")
+
+    __table_args__ = (db.UniqueConstraint("user_id", "album_version_id", name="unique_user_album"),)
+
+    def __init__(self, user_id: int, album_version_id: int, is_active: bool = False):
+        self.user_id = user_id
+        self.album_version_id = album_version_id
+        self.is_active = is_active
+
+    def __repr__(self) -> str:
+        return f"<UserAlbum user={self.user_id} version={self.album_version_id}>"
+
 
 class UserSticker(db.Model):
     """
@@ -131,10 +197,13 @@ class UserSticker(db.Model):
     # Relationship to user
     user = db.relationship("User", back_populates="stickers")
 
-    # Unique constraint: each user can only have one entry per sticker
-    __table_args__ = (db.UniqueConstraint("user_id", "sticker_id", name="unique_user_sticker"),)
+    # Foreign key to album version
+    album_version_id = db.Column(db.Integer, db.ForeignKey("album_versions.id"), nullable=False)
 
-    def __init__(self, user_id: int, sticker_id: str, is_owned: bool = False, duplicate_count: int = 0):
+    # Unique constraint: each user can only have one entry per sticker per version
+    __table_args__ = (db.UniqueConstraint("user_id", "sticker_id", "album_version_id", name="unique_user_sticker_version"),)
+
+    def __init__(self, user_id: int, sticker_id: str, album_version_id: int, is_owned: bool = False, duplicate_count: int = 0):
         """
         Create a new user sticker record.
 
@@ -146,6 +215,7 @@ class UserSticker(db.Model):
         """
         self.user_id = user_id
         self.sticker_id = sticker_id
+        self.album_version_id = album_version_id
         self.is_owned = is_owned
         self.duplicate_count = duplicate_count
 
@@ -153,6 +223,7 @@ class UserSticker(db.Model):
         """Convert to dictionary for JSON serialization."""
         return {
             "sticker_id": self.sticker_id,
+            "album_version_id": self.album_version_id,
             "is_owned": self.is_owned,
             "duplicate_count": self.duplicate_count,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

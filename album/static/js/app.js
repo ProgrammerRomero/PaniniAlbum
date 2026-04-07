@@ -42,6 +42,57 @@
   const DUPLICATES_KEY = "panini_album_duplicates_v1";
 
   // ===========================================================================
+  // ALBUM VERSION MANAGEMENT
+  // ===========================================================================
+
+  // Get current album version from body data attribute
+  const currentTheme = document.body.dataset.theme || 'blue';
+
+  /**
+   * Switch active album version
+   * @param {string} versionCode - 'gold', 'blue', or 'orange'
+   */
+  async function switchAlbumVersion(versionCode) {
+    try {
+      const response = await fetch("/api/user/switch-version", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCsrfToken(),
+        },
+        body: JSON.stringify({ version_code: versionCode }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Reload page to apply new theme and data
+          window.location.reload();
+        }
+      } else {
+        console.error("Failed to switch version:", await response.text());
+      }
+    } catch (e) {
+      console.error("Error switching album version:", e);
+    }
+  }
+
+  /**
+   * Initialize version switcher if present
+   */
+  function initVersionSwitcher() {
+    const versionSelect = document.getElementById("versionSelect");
+    if (versionSelect) {
+      versionSelect.addEventListener("change", function() {
+        const selectedVersion = this.value;
+        if (selectedVersion && selectedVersion !== currentTheme) {
+          switchAlbumVersion(selectedVersion);
+        }
+      });
+    }
+  }
+
+  // ===========================================================================
   // STATS MODAL ELEMENTS
   // ===========================================================================
 
@@ -105,6 +156,8 @@
   let ownedIds = new Set();
   let duplicatesData = {};
   let isLoading = false;
+  let currentVersionId = null;
+  let isSyncingFromState = false; // Flag to prevent event loops
 
   // ===========================================================================
   // DATA LOADING (from database or localStorage)
@@ -119,14 +172,26 @@
     if (isLoading) return;
     isLoading = true;
 
+    // Clear existing state before loading new data
+    // This prevents stale data from persisting across version switches
+    ownedIds = new Set();
+    duplicatesData = {};
+
     try {
       if (isLoggedIn) {
-        // Fetch from database API
-        const response = await fetch("/api/user/stickers");
+        // Fetch from database API with cache-busting to ensure fresh data
+        const response = await fetch("/api/user/stickers?_=" + Date.now(), {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache",
+          }
+        });
         if (response.ok) {
           const data = await response.json();
           ownedIds = new Set(data.owned || []);
           duplicatesData = data.duplicates || {};
+          currentVersionId = data.version_id;
+          console.log("Loaded stickers for version:", data.version_id, "Count:", ownedIds.size);
         } else {
           console.warn("Failed to load user data from API, using localStorage fallback");
           loadFromLocalStorage();
@@ -139,6 +204,19 @@
       console.warn("Error loading user data:", e);
       loadFromLocalStorage();
     } finally {
+      // Always ensure we have a version ID - fallback to body data attribute
+      if (!currentVersionId) {
+        const versionFromBody = document.body.dataset.versionId;
+        if (versionFromBody) {
+          currentVersionId = parseInt(versionFromBody);
+          console.log("Set version ID from body attribute:", currentVersionId);
+        }
+      }
+
+      if (!currentVersionId) {
+        console.error("CRITICAL: Could not determine current version ID - saves may fail");
+      }
+
       isLoading = false;
       // Sync UI with loaded data
       syncCheckboxesFromState();
@@ -190,6 +268,7 @@
 
   /**
    * Save ownership status to appropriate storage.
+   * @returns {Promise<boolean>} - True if save succeeded, false otherwise
    */
   async function saveOwnership(stickerId, isOwned) {
     if (isLoggedIn) {
@@ -200,27 +279,33 @@
             "Content-Type": "application/json",
             "X-CSRFToken": getCsrfToken(),
           },
-          body: JSON.stringify({ sticker_id: stickerId, is_owned: isOwned }),
+          body: JSON.stringify({ sticker_id: stickerId, is_owned: isOwned, version_id: currentVersionId }),
         });
         if (!response.ok) {
           console.error("Failed to save sticker ownership:", response.status, await response.text());
+          return false;
         }
+        return true;
       } catch (e) {
         console.warn("Failed to save to API:", e);
+        return false;
       }
     } else {
       // Save to localStorage
       try {
         const arr = Array.from(ownedIds);
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+        return true;
       } catch (e) {
         console.warn("Failed to save to localStorage:", e);
+        return false;
       }
     }
   }
 
   /**
    * Save ownership status for multiple stickers in one request (batch).
+   * @returns {Promise<boolean>} - True if save succeeded, false otherwise
    */
   async function saveOwnershipBatch(stickerIds, isOwned) {
     if (isLoggedIn) {
@@ -231,27 +316,33 @@
             "Content-Type": "application/json",
             "X-CSRFToken": getCsrfToken(),
           },
-          body: JSON.stringify({ sticker_ids: stickerIds, is_owned: isOwned }),
+          body: JSON.stringify({ sticker_ids: stickerIds, is_owned: isOwned, version_id: currentVersionId }),
         });
         if (!response.ok) {
           console.error("Failed to save batch sticker ownership:", response.status, await response.text());
+          return false;
         }
+        return true;
       } catch (e) {
         console.warn("Failed to save batch to API:", e);
+        return false;
       }
     } else {
       // Save all at once to localStorage
       try {
         const arr = Array.from(ownedIds);
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+        return true;
       } catch (e) {
         console.warn("Failed to save to localStorage:", e);
+        return false;
       }
     }
   }
 
   /**
    * Save duplicate count to appropriate storage.
+   * @returns {Promise<boolean>} - True if save succeeded, false otherwise
    */
   async function saveDuplicate(stickerId, count) {
     if (isLoggedIn) {
@@ -262,20 +353,25 @@
             "Content-Type": "application/json",
             "X-CSRFToken": getCsrfToken(),
           },
-          body: JSON.stringify({ sticker_id: stickerId, count: count }),
+          body: JSON.stringify({ sticker_id: stickerId, count: count, version_id: currentVersionId }),
         });
         if (!response.ok) {
           console.error("Failed to save duplicate count:", response.status, await response.text());
+          return false;
         }
+        return true;
       } catch (e) {
         console.warn("Failed to save duplicate to API:", e);
+        return false;
       }
     } else {
       // Save to localStorage
       try {
         window.localStorage.setItem(DUPLICATES_KEY, JSON.stringify(duplicatesData));
+        return true;
       } catch (e) {
         console.warn("Failed to save duplicates to localStorage:", e);
+        return false;
       }
     }
   }
@@ -285,14 +381,27 @@
   // ===========================================================================
 
   function syncCheckboxesFromState() {
+    // Set flag before updating checkboxes to prevent event handlers from firing
+    isSyncingFromState = true;
+
     const checkboxes = document.querySelectorAll(".sticker-checkbox");
     checkboxes.forEach((cb) => {
       const id = cb.getAttribute("data-sticker-id");
-      cb.checked = ownedIds.has(id);
+      const shouldBeChecked = ownedIds.has(id);
+      // Only update if different to avoid unnecessary events
+      if (cb.checked !== shouldBeChecked) {
+        cb.checked = shouldBeChecked;
+      }
     });
+
+    // Clear flag synchronously - all DOM updates are done
+    isSyncingFromState = false;
   }
 
   async function handleCheckboxChange(event) {
+    // Skip if we're syncing from state (prevents event loops)
+    if (isSyncingFromState) return;
+
     const cb = event.target;
     if (!(cb instanceof HTMLInputElement)) return;
     if (!cb.classList.contains("sticker-checkbox")) return;
@@ -300,6 +409,7 @@
     const id = cb.getAttribute("data-sticker-id");
     if (!id) return;
 
+    // Update local state first (optimistic UI)
     if (cb.checked) {
       ownedIds.add(id);
     } else {
@@ -311,7 +421,21 @@
       }
     }
 
-    await saveOwnership(id, cb.checked);
+    // Save to server
+    const saveSuccess = await saveOwnership(id, cb.checked);
+
+    if (!saveSuccess) {
+      // Save failed - revert checkbox to previous state
+      console.error(`Failed to save sticker ${id}, reverting UI`);
+      if (cb.checked) {
+        ownedIds.delete(id);
+        cb.checked = false;
+      } else {
+        ownedIds.add(id);
+        cb.checked = true;
+      }
+      return;
+    }
 
     // Update team completion status
     const card = cb.closest(".sticker-card");
@@ -826,6 +950,9 @@
   };
 
   async function handleTeamToggleChange(event) {
+    // Skip if we're syncing from state (prevents event loops)
+    if (isSyncingFromState) return;
+
     const toggle = event.target;
 
     if (!toggle.classList.contains("team-toggle")) return;
@@ -854,12 +981,14 @@
         return;
       }
 
+      let saveSuccess = false;
+
       if (isChecked) {
         // Mark all stickers as owned - batch update
         for (const stickerId of stickerIds) {
           ownedIds.add(stickerId);
         }
-        await saveOwnershipBatch(stickerIds, true);
+        saveSuccess = await saveOwnershipBatch(stickerIds, true);
       } else {
         // Remove all stickers from owned - batch update
         for (const stickerId of stickerIds) {
@@ -869,13 +998,23 @@
             delete duplicatesData[stickerId];
           }
         }
-        await saveOwnershipBatch(stickerIds, false);
+        saveSuccess = await saveOwnershipBatch(stickerIds, false);
       }
 
-      // Sync UI
-      syncCheckboxesFromState();
-      syncDuplicatesFromState();
-      updateTeamCompletionStatus(teamCode, stickerIds);
+      if (saveSuccess) {
+        // Sync UI only if save succeeded
+        syncCheckboxesFromState();
+        syncDuplicatesFromState();
+        updateTeamCompletionStatus(teamCode, stickerIds);
+        console.log(`Team ${teamCode} toggle ${isChecked ? 'ON' : 'OFF'} - saved successfully`);
+      } else {
+        // Save failed - reload data from server to restore correct state
+        console.error(`Team ${teamCode} toggle save failed - reloading data`);
+        await loadUserData();
+        syncCheckboxesFromState();
+        syncDuplicatesFromState();
+        updateTeamCompletionStatus(teamCode, stickerIds);
+      }
     });
   }
 
@@ -885,10 +1024,11 @@
     if (!tag || !toggle) return;
 
     const allOwned = stickerIds.every(id => ownedIds.has(id));
-    const anyOwned = stickerIds.some(id => ownedIds.has(id));
 
-    // Update toggle state
+    // Update toggle state without triggering events
+    isSyncingFromState = true;
     toggle.checked = allOwned;
+    isSyncingFromState = false;
 
     // Show/hide completed tag
     if (allOwned) {
@@ -899,6 +1039,7 @@
   }
 
   function updateAllTeamCompletionStatus() {
+    isSyncingFromState = true;
     const toggles = document.querySelectorAll(".team-toggle[data-team-code]");
     toggles.forEach(toggle => {
       const teamCode = toggle.getAttribute("data-team-code");
@@ -907,11 +1048,25 @@
 
       try {
         const stickerIds = JSON.parse(stickerIdsJson);
-        updateTeamCompletionStatus(teamCode, stickerIds);
+        const tag = document.querySelector(`.team-completed-tag[data-team-code="${teamCode}"]`);
+        if (!tag || !toggle) return;
+
+        const allOwned = stickerIds.every(id => ownedIds.has(id));
+
+        // Update toggle state
+        toggle.checked = allOwned;
+
+        // Show/hide completed tag
+        if (allOwned) {
+          tag.style.display = "inline-flex";
+        } else {
+          tag.style.display = "none";
+        }
       } catch (e) {
         console.error("Failed to parse sticker IDs:", e);
       }
     });
+    isSyncingFromState = false;
   }
 
   // ===========================================================================
@@ -994,6 +1149,9 @@
   async function init() {
     // ALWAYS initialize user dropdown (works on all pages including profile)
     initUserDropdown();
+
+    // Initialize version switcher (if present)
+    initVersionSwitcher();
 
     // Pre-load album structure and user data for stats modal (needed on all authenticated pages)
     // These run in parallel with other init tasks

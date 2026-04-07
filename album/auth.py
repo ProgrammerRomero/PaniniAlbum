@@ -29,7 +29,7 @@ from flask_login import (
 )
 from flask_mail import Message as MailMessage, Mail
 
-from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation, ConversationFavorite, COUNTRIES, COUNTRY_CODES
+from .models import db, User, PasswordResetToken, UserSticker, bcrypt, Message, Trade, TradeConfirmation, ConversationFavorite, COUNTRIES, COUNTRY_CODES, AlbumVersion, UserAlbum
 from .utils import validate_email
 
 # Create blueprint
@@ -42,6 +42,101 @@ SUPPORT_EMAIL = "support@paninialbum.local"
 # Public contact form sender (to avoid "messaging yourself" error)
 PUBLIC_CONTACT_USERNAME = "Public Contact"
 PUBLIC_CONTACT_EMAIL = "contact@paninialbum.local"
+
+
+def require_version_selected(f):
+    """
+    Decorator that redirects to version selection if user hasn't selected an album version.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.is_authenticated and not current_user.has_selected_version:
+            # Check if user has any album versions
+            has_version = UserAlbum.query.filter_by(user_id=current_user.id).first()
+            if not has_version:
+                return redirect(url_for("auth.select_version"))
+            else:
+                # User has versions but flag not set, update it
+                current_user.has_selected_version = True
+                db.session.commit()
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# =============================================================================
+# VERSION SELECTION
+# =============================================================================
+
+@auth_bp.route("/select-version", methods=["GET", "POST"])
+@login_required
+def select_version():
+    """
+    Album version selection page.
+
+    GET: Displays version selection cards
+    POST: Processes version selection and creates UserAlbum entry
+    """
+    # Get all available versions
+    versions = AlbumVersion.query.filter_by(is_active=True).all()
+
+    # Get user's existing versions
+    user_versions = UserAlbum.query.filter_by(user_id=current_user.id).all()
+    user_version_ids = {uv.album_version_id for uv in user_versions}
+
+    if request.method == "POST":
+        version_id = request.form.get("version_id", type=int)
+
+        if not version_id:
+            flash("Por favor selecciona una versión del álbum.", "error")
+            return render_template("auth/select_version.html", versions=versions, user_version_ids=user_version_ids)
+
+        # Check if version exists
+        version = AlbumVersion.query.get(version_id)
+        if not version:
+            flash("Versión no válida.", "error")
+            return render_template("auth/select_version.html", versions=versions, user_version_ids=user_version_ids)
+
+        # Check if user already has this version
+        existing = UserAlbum.query.filter_by(
+            user_id=current_user.id,
+            album_version_id=version_id
+        ).first()
+
+        if existing:
+            # Just make it active
+            existing.is_active = True
+            # Deactivate others
+            UserAlbum.query.filter(
+                UserAlbum.user_id == current_user.id,
+                UserAlbum.album_version_id != version_id
+            ).update({"is_active": False})
+        else:
+            # Deactivate all other versions first
+            UserAlbum.query.filter_by(user_id=current_user.id).update({"is_active": False})
+
+            # Create new UserAlbum
+            user_album = UserAlbum(
+                user_id=current_user.id,
+                album_version_id=version_id,
+                is_active=True
+            )
+            db.session.add(user_album)
+
+        # Mark user as having selected version
+        current_user.has_selected_version = True
+        db.session.commit()
+
+        flash(f"¡Has seleccionado la {version.display_name}!", "success")
+        return redirect(url_for("album.index"))
+
+    # Get active version for "Currently Active" label
+    active_album = UserAlbum.query.filter_by(user_id=current_user.id, is_active=True).first()
+    active_version_id = active_album.album_version_id if active_album else None
+
+    return render_template("auth/select_version.html",
+                          versions=versions,
+                          user_version_ids=user_version_ids,
+                          active_version_id=active_version_id)
 
 
 # =============================================================================
@@ -429,7 +524,100 @@ def profile():
         "total": total_stickers,
     }
 
-    return render_template("auth/profile.html", stats=stats, countries=COUNTRIES, country_codes=COUNTRY_CODES)
+    # Get user's album versions
+    user_albums = UserAlbum.query.filter_by(user_id=current_user.id).all()
+    user_version_ids = {ua.album_version_id for ua in user_albums}
+
+    # Get active version
+    active_album = next((ua for ua in user_albums if ua.is_active), None)
+
+    # Get all available versions
+    all_versions = AlbumVersion.query.filter_by(is_active=True).all()
+
+    return render_template("auth/profile.html",
+                          stats=stats,
+                          countries=COUNTRIES,
+                          country_codes=COUNTRY_CODES,
+                          user_albums=user_albums,
+                          user_version_ids=user_version_ids,
+                          active_album=active_album,
+                          all_versions=all_versions)
+
+
+@auth_bp.route("/manage-versions", methods=["POST"])
+@login_required
+def manage_versions():
+    """
+    Manage album versions from profile page.
+
+    Allows users to add or remove versions by toggling checkboxes.
+    """
+    version_ids = request.form.getlist("version_ids", type=int)
+    action = request.form.get("action", "add")
+
+    # Get user's current versions
+    current_user_albums = UserAlbum.query.filter_by(user_id=current_user.id).all()
+    current_version_ids = {ua.album_version_id for ua in current_user_albums}
+
+    added_count = 0
+    removed_count = 0
+
+    # Versions to add (selected but not currently owned)
+    versions_to_add = set(version_ids) - current_version_ids
+
+    # Versions to remove (not selected but currently owned)
+    versions_to_remove = current_version_ids - set(version_ids)
+
+    # Prevent removing the last version (must have at least one)
+    if len(current_version_ids) - len(versions_to_remove) < 1:
+        flash("You must keep at least one album edition.", "error")
+        return redirect(url_for("auth.profile"))
+
+    # Prevent removing the active version
+    active_version = next((ua for ua in current_user_albums if ua.is_active), None)
+    if active_version and active_version.album_version_id in versions_to_remove:
+        flash("Cannot remove your currently active edition. Switch to another edition first.", "error")
+        return redirect(url_for("auth.profile"))
+
+    # Add new versions
+    for version_id in versions_to_add:
+        version = AlbumVersion.query.get(version_id)
+        if not version:
+            continue
+
+        current_count = UserAlbum.query.filter_by(user_id=current_user.id).count()
+        user_album = UserAlbum(
+            user_id=current_user.id,
+            album_version_id=version_id,
+            is_active=(current_count == 0)
+        )
+        db.session.add(user_album)
+        added_count += 1
+
+    # Remove versions
+    for version_id in versions_to_remove:
+        user_album = UserAlbum.query.filter_by(
+            user_id=current_user.id,
+            album_version_id=version_id
+        ).first()
+        if user_album:
+            db.session.delete(user_album)
+            removed_count += 1
+
+    db.session.commit()
+
+    messages = []
+    if added_count > 0:
+        messages.append(f"added {added_count} edition(s)")
+    if removed_count > 0:
+        messages.append(f"removed {removed_count} edition(s)")
+
+    if messages:
+        flash(f"Successfully {' and '.join(messages)}!", "success")
+    else:
+        flash("No changes were made.", "info")
+
+    return redirect(url_for("auth.profile"))
 
 
 @auth_bp.route("/change-password", methods=["GET", "POST"])
@@ -726,9 +914,22 @@ def users():
     1. Users who have duplicates that the current user needs
     2. Users who need duplicates that the current user has
 
-    This helps users find the best trading opportunities.
+    Filters users by the current user's active album version.
     """
     from .config import ALBUM_PAGES
+    from .models import UserAlbum, AlbumVersion
+
+    # Get current user's active album version
+    active_album = UserAlbum.query.filter_by(
+        user_id=current_user.id, is_active=True
+    ).first()
+
+    if active_album:
+        current_version_id = active_album.album_version_id
+    else:
+        # Default to blue version
+        blue = AlbumVersion.query.filter_by(code="blue").first()
+        current_version_id = blue.id if blue else 1
 
     # Get all stickers in the album
     all_sticker_ids = set()
@@ -736,20 +937,27 @@ def users():
         for sticker in page.get("stickers", []):
             all_sticker_ids.add(sticker["id"])
 
-    # Get current user's data
+    # Get current user's data for the active version
     current_owned = set()
     current_duplicates = {}
     for sticker in current_user.stickers:
-        if sticker.is_owned:
-            current_owned.add(sticker.sticker_id)
-        if sticker.duplicate_count > 0:
-            current_duplicates[sticker.sticker_id] = sticker.duplicate_count
+        if sticker.album_version_id == current_version_id:
+            if sticker.is_owned:
+                current_owned.add(sticker.sticker_id)
+            if sticker.duplicate_count > 0:
+                current_duplicates[sticker.sticker_id] = sticker.duplicate_count
 
     current_missing = all_sticker_ids - current_owned
 
-    # Get all other users, excluding system users (support and public contact)
+    # Get users who have the same album version
+    user_ids_with_version = db.session.query(UserAlbum.user_id).filter_by(
+        album_version_id=current_version_id
+    ).subquery()
+
+    # Get all other users with same version, excluding system users
     other_users = User.query.filter(
         User.id != current_user.id,
+        User.id.in_(user_ids_with_version),
         User.username != SUPPORT_USERNAME,
         User.username != PUBLIC_CONTACT_USERNAME
     ).all()
@@ -757,15 +965,16 @@ def users():
     user_data = []
 
     for user in other_users:
-        # Get user's stickers
+        # Get user's stickers for the current version only
         user_owned = set()
         user_duplicates = {}
 
         for sticker in user.stickers:
-            if sticker.is_owned:
-                user_owned.add(sticker.sticker_id)
-            if sticker.duplicate_count > 0:
-                user_duplicates[sticker.sticker_id] = sticker.duplicate_count
+            if sticker.album_version_id == current_version_id:
+                if sticker.is_owned:
+                    user_owned.add(sticker.sticker_id)
+                if sticker.duplicate_count > 0:
+                    user_duplicates[sticker.sticker_id] = sticker.duplicate_count
 
         user_missing = all_sticker_ids - user_owned
 
@@ -803,12 +1012,16 @@ def users():
     # Calculate current user's tradeable duplicates (extra copies beyond the first one)
     current_tradeable_duplicates = sum(max(0, count - 1) for count in current_duplicates.values())
 
+    # Get current version info for display
+    current_version = AlbumVersion.query.get(current_version_id)
+
     return render_template(
         "auth/users.html",
         users_data=user_data,
         current_missing_count=len(current_missing),
         current_duplicates_count=current_tradeable_duplicates,
         country_codes=COUNTRY_CODES,
+        current_version=current_version,
     )
 
 
