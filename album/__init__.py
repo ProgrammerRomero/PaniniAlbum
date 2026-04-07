@@ -310,15 +310,22 @@ def create_app() -> Flask:
                 db.session.commit()
                 app.logger.info("Auto-migrated: Created album_versions table")
 
-                # Insert default versions
-                db.session.execute(text("""
-                    INSERT INTO album_versions (code, name, display_name, theme_css_class, is_active) VALUES
-                    ('gold', 'Gold', 'Gold Edition', 'theme-gold', TRUE),
-                    ('blue', 'Blue', 'Blue Edition', 'theme-blue', TRUE),
-                    ('orange', 'Orange', 'Orange Edition', 'theme-orange', TRUE)
-                """))
-                db.session.commit()
-                app.logger.info("Auto-migrated: Inserted default album versions")
+            # Check if album_versions has data - populate if empty
+            try:
+                result = db.session.execute(text("SELECT COUNT(*) FROM album_versions")).scalar()
+                if result == 0:
+                    # Insert default versions
+                    db.session.execute(text("""
+                        INSERT INTO album_versions (code, name, display_name, theme_css_class, is_active) VALUES
+                        ('gold', 'Gold', 'Gold Edition', 'theme-gold', TRUE),
+                        ('blue', 'Blue', 'Blue Edition', 'theme-blue', TRUE),
+                        ('orange', 'Orange', 'Orange Edition', 'theme-orange', TRUE)
+                    """))
+                    db.session.commit()
+                    app.logger.info("Auto-migrated: Inserted default album versions")
+            except Exception as e2:
+                app.logger.warning(f"Could not check/populate album_versions: {e2}")
+                db.session.rollback()
 
             if 'user_albums' not in tables:
                 db.session.execute(text("""
