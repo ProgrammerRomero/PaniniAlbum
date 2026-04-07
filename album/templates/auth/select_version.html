@@ -26,6 +26,11 @@
     <form class="version-selection-form" method="POST" action="{{ url_for('auth.select_version') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+      {% if not versions %}
+      <div class="no-versions-message" style="text-align: center; padding: 2rem; color: #ef4444;">
+        <p>⚠️ No album versions available. Please contact support.</p>
+      </div>
+      {% else %}
       <div class="version-cards">
         {% for version in versions %}
         <div class="version-card {{ version.theme_css_class }}" data-version-id="{{ version.id }}">
@@ -63,6 +68,7 @@
         </div>
         {% endfor %}
       </div>
+      {% endif %}
     </form>
   </div>
 </section>
@@ -74,6 +80,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
 .version-selection-container {
@@ -90,15 +97,16 @@
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+  background: linear-gradient(135deg, #38bdf8, #7dd3fc);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: #38bdf8;
 }
 
 .version-selection-subtitle {
   font-size: 1.1rem;
-  color: var(--color-text-muted);
+  color: #94a3b8;
   max-width: 600px;
   margin: 0 auto;
 }
@@ -112,8 +120,8 @@
 }
 
 .version-card {
-  background: var(--color-bg-elevated);
-  border: 2px solid var(--color-border);
+  background: #1e293b;
+  border: 2px solid rgba(56, 189, 248, 0.3);
   border-radius: 16px;
   padding: 2rem;
   text-align: center;
