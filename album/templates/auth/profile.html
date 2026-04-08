@@ -108,10 +108,17 @@
               </div>
 
               <div class="detail-item">
-                <span class="detail-label">City:</span>
+                <span class="detail-label">City: <span class="required-mark" style="color: #ef4444; display: none;" id="cityRequired">*</span></span>
                 <div class="detail-value">
                   <span class="view-mode">{{ current_user.city or 'Not set' }}</span>
-                  <input type="text" name="city" class="edit-input" value="{{ current_user.city or '' }}" style="display: none;" placeholder="Enter your city">
+                  <!-- City dropdown - populated based on country selection -->
+                  <select name="city" class="edit-input city-select" style="display: none;">
+                    <option value="" disabled selected>Select a city</option>
+                    <!-- Options populated by JavaScript -->
+                  </select>
+                  <div class="city-error" style="color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem; display: none;">
+                    Please select a city for your country.
+                  </div>
                 </div>
               </div>
 
@@ -620,6 +627,20 @@ function cancelEditMode() {
   document.querySelector('input[name="email"]').value = originalValues.email;
   document.querySelector('select[name="country"]').value = originalValues.country;
 
+  // Restore city if it was stored
+  if (originalValues.city !== undefined) {
+    const citySelect = document.querySelector('select[name="city"]');
+    if (citySelect) {
+      // Re-populate city dropdown first
+      populateCityDropdown(originalValues.country);
+      // Then restore the selected value
+      citySelect.value = originalValues.city;
+    }
+  }
+
+  // Hide city error message
+  document.querySelector('.city-error').style.display = 'none';
+
   // Show view mode, hide edit mode
   // Restore by clearing inline display (reverts to CSS default)
   document.querySelectorAll('.view-mode').forEach(el => {
@@ -652,6 +673,220 @@ window.addEventListener('beforeunload', function(e) {
     return e.returnValue;
   }
 });
+
+// Country-City Data - Major cities for all countries
+const citiesByCountry = {
+  'Afghanistan': ['Kabul', 'Herat', 'Mazar-i-Sharif', 'Kandahar', 'Jalalabad', 'Kunduz', 'Ghazni', 'Lashkar Gah'],
+  'Albania': ['Tirana', 'Durrës', 'Vlorë', 'Shkodër', 'Elbasan', 'Fier', 'Korçë', 'Berat'],
+  'Algeria': ['Algiers', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Batna', 'Sétif', 'Tlemcen'],
+  'Argentina': ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'La Plata', 'San Miguel de Tucumán', 'Mar del Plata', 'Salta'],
+  'Armenia': ['Yerevan', 'Gyumri', 'Vanadzor', 'Vagharshapat', 'Hrazdan', 'Abovyan', 'Kapan', 'Armavir'],
+  'Australia': [
+    'Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Newcastle',
+    'Canberra', 'Wollongong', 'Hobart', 'Geelong', 'Townsville', 'Cairns', 'Darwin',
+    'Toowoomba', 'Ballarat', 'Bendigo', 'Albury', 'Launceston', 'Mackay'
+  ],
+  'Austria': ['Vienna', 'Graz', 'Linz', 'Salzburg', 'Innsbruck', 'Klagenfurt', 'Villach', 'Wels'],
+  'Azerbaijan': ['Baku', 'Ganja', 'Sumqayit', 'Lankaran', 'Mingachevir', 'Shirvan', 'Nakhchivan', 'Shaki'],
+  'Bahamas': ['Nassau', 'Freeport', 'West End', 'Lucaya', 'George Town', 'Alice Town', 'Dunmore Town', 'Hope Town'],
+  'Bahrain': ['Manama', 'Riffa', 'Muharraq', 'Hamad Town', 'A\'ali', 'Isa Town', 'Sitra', 'Budaiya'],
+  'Bangladesh': ['Dhaka', 'Chittagong', 'Khulna', 'Rajshahi', 'Sylhet', 'Barisal', 'Rangpur', 'Comilla'],
+  'Belarus': ['Minsk', 'Gomel', 'Mogilev', 'Vitebsk', 'Grodno', 'Brest', 'Bobruisk', 'Baranovichi'],
+  'Belgium': ['Brussels', 'Antwerp', 'Ghent', 'Charleroi', 'Liège', 'Bruges', 'Namur', 'Leuven'],
+  'Belize': ['Belize City', 'San Ignacio', 'Belmopan', 'Orange Walk', 'San Pedro', 'Corozal', 'Dangriga', 'Punta Gorda'],
+  'Bhutan': ['Thimphu', 'Phuntsholing', 'Punakha', 'Wangdue Phodrang', 'Paro', 'Gelephu', 'Samdrup Jongkhar', 'Trashigang'],
+  'Bolivia': ['Santa Cruz de la Sierra', 'La Paz', 'El Alto', 'Cochabamba', 'Sucre', 'Oruro', 'Potosí', 'Tarija'],
+  'Bosnia and Herzegovina': ['Sarajevo', 'Banja Luka', 'Tuzla', 'Zenica', 'Mostar', 'Prijedor', 'Brčko', 'Bihać'],
+  'Brazil': ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Manaus', 'Curitiba'],
+  'Bulgaria': ['Sofia', 'Plovdiv', 'Varna', 'Burgas', 'Ruse', 'Stara Zagora', 'Pleven', 'Sliven'],
+  'Cambodia': ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kampong Cham', 'Poipet', 'Kampot', 'Kep'],
+  'Cameroon': ['Douala', 'Yaoundé', 'Bamenda', 'Garoua', 'Maroua', 'Bafoussam', 'Ngaoundéré', 'Limbe'],
+  'Canada': ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City'],
+  'Chile': ['Santiago', 'Valparaíso', 'Concepción', 'La Serena', 'Antofagasta', 'Temuco', 'Iquique', 'Puerto Montt'],
+  'China': ['Shanghai', 'Beijing', 'Guangzhou', 'Shenzhen', 'Chengdu', 'Wuhan', 'Xi\'an', 'Hangzhou'],
+  'Colombia': [
+    'Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Cúcuta', 'Bucaramanga',
+    'Pereira', 'Santa Marta', 'Ibagué', 'Pasto', 'Manizales', 'Neiva', 'Villavicencio',
+    'Armenia', 'Montería', 'Valledupar', 'Popayán', 'Sincelejo', 'Tunja'
+  ],
+  'Costa Rica': ['San José', 'Cartago', 'Heredia', 'Alajuela', 'Liberia', 'Puntarenas', 'Limón', 'San Isidro'],
+  'Croatia': ['Zagreb', 'Split', 'Rijeka', 'Osijek', 'Zadar', 'Pula', 'Slavonski Brod', 'Karlovac'],
+  'Cuba': ['Havana', 'Santiago de Cuba', 'Camagüey', 'Holguín', 'Santa Clara', 'Guantánamo', 'Bayamo', 'Baracoa'],
+  'Cyprus': ['Nicosia', 'Limassol', 'Larnaca', 'Famagusta', 'Paphos', 'Kyrenia', 'Paralimni', 'Morphou'],
+  'Czech Republic': ['Prague', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc', 'České Budějovice', 'Hradec Králové'],
+  'Denmark': ['Copenhagen', 'Aarhus', 'Odense', 'Aalborg', 'Frederiksberg', 'Esbjerg', 'Horsens', 'Randers'],
+  'Dominican Republic': ['Santo Domingo', 'Santiago', 'La Romana', 'San Pedro de Macorís', 'Higüey', 'Puerto Plata', 'La Vega', 'San Cristóbal'],
+  'Ecuador': ['Guayaquil', 'Quito', 'Cuenca', 'Santo Domingo', 'Machala', 'Durán', 'Portoviejo', 'Manta'],
+  'Egypt': ['Cairo', 'Alexandria', 'Giza', 'Shubra El-Kheima', 'Port Said', 'Suez', 'Luxor', 'Asyut'],
+  'El Salvador': ['San Salvador', 'Santa Ana', 'San Miguel', 'Soyapango', 'Mejicanos', 'Apopa', 'Delgado', 'Ilopango'],
+  'Estonia': ['Tallinn', 'Tartu', 'Narva', 'Pärnu', 'Kohtla-Järve', 'Viljandi', 'Rakvere', 'Maardu'],
+  'Ethiopia': ['Addis Ababa', 'Dire Dawa', 'Mek\'ele', 'Nazret', 'Bahir Dar', 'Gondar', 'Dessie', 'Jimma'],
+  'Fiji': ['Suva', 'Lautoka', 'Nadi', 'Labasa', 'Ba', 'Sigatoka', 'Nausori', 'Savusavu'],
+  'Finland': ['Helsinki', 'Espoo', 'Tampere', 'Vantaa', 'Oulu', 'Turku', 'Jyväskylä', 'Lahti'],
+  'France': ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier'],
+  'Germany': ['Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Leipzig'],
+  'Ghana': ['Accra', 'Kumasi', 'Tamale', 'Sekondi-Takoradi', 'Ashaiman', 'Sunyani', 'Cape Coast', 'Koforidua'],
+  'Greece': ['Athens', 'Thessaloniki', 'Patras', 'Heraklion', 'Larissa', 'Volos', 'Ioannina', 'Kavala'],
+  'Guatemala': ['Guatemala City', 'Quetzaltenango', 'Villa Nueva', 'Mixco', 'Cobán', 'San Pedro Carchá', 'Huehuetenango', 'Puerto Barrios'],
+  'Haiti': ['Port-au-Prince', 'Cap-Haïtien', 'Gonaïves', 'Les Cayes', 'Saint-Marc', 'Jacmel', 'Jérémie', 'Port-de-Paix'],
+  'Honduras': ['Tegucigalpa', 'San Pedro Sula', 'Choloma', 'La Ceiba', 'El Progreso', 'Choluteca', 'Comayagua', 'Puerto Cortés'],
+  'Hungary': ['Budapest', 'Debrecen', 'Szeged', 'Miskolc', 'Pécs', 'Győr', 'Nyíregyháza', 'Kecskemét'],
+  'Iceland': ['Reykjavik', 'Kópavogur', 'Hafnarfjörður', 'Akureyri', 'Garðabær', 'Mosfellsbær', 'Árborg', 'Akranes'],
+  'India': ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad'],
+  'Indonesia': ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Semarang', 'Palembang', 'Makassar', 'Tangerang'],
+  'Iran': ['Tehran', 'Mashhad', 'Isfahan', 'Karaj', 'Shiraz', 'Tabriz', 'Qom', 'Ahvaz'],
+  'Iraq': ['Baghdad', 'Basra', 'Mosul', 'Erbil', 'Sulaymaniyah', 'Najaf', 'Karbala', 'Nasiriyah'],
+  'Ireland': ['Dublin', 'Cork', 'Limerick', 'Galway', 'Waterford', 'Drogheda', 'Swords', 'Dundalk'],
+  'Israel': ['Jerusalem', 'Tel Aviv', 'Haifa', 'Rishon LeZion', 'Petah Tikva', 'Ashdod', 'Netanya', 'Beersheba'],
+  'Italy': ['Rome', 'Milan', 'Naples', 'Turin', 'Palermo', 'Genoa', 'Bologna', 'Florence'],
+  'Jamaica': ['Kingston', 'Montego Bay', 'Spanish Town', 'Portmore', 'May Pen', 'Mandeville', 'Old Harbour', 'Savanna-la-Mar'],
+  'Japan': ['Tokyo', 'Yokohama', 'Osaka', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Kyoto'],
+  'Jordan': ['Amman', 'Irbid', 'Zarqa', 'Russeifa', 'Wadi as-Ser', 'Aqaba', 'Baqa\'a', 'Madaba'],
+  'Kazakhstan': ['Almaty', 'Astana', 'Shymkent', 'Karaganda', 'Aktobe', 'Taraz', 'Pavlodar', 'Oskemen'],
+  'Kenya': ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Ruiru', 'Kikuyu', 'Ngong'],
+  'Kuwait': ['Kuwait City', 'Al Ahmadi', 'Hawalli', 'As Salimiyah', 'Sabah as Salim', 'Al Farwaniyah', 'Al Fahahil', 'Ar Rumaythiyah'],
+  'Laos': ['Vientiane', 'Luang Prabang', 'Savannakhet', 'Pakse', 'Thakhek', 'Xam Neua', 'Phonsavan', 'Luang Namtha'],
+  'Latvia': ['Riga', 'Daugavpils', 'Liepāja', 'Jelgava', 'Jūrmala', 'Ventspils', 'Rēzekne', 'Ogre'],
+  'Lebanon': ['Beirut', 'Tripoli', 'Sidon', 'Tyre', 'Nabatîyé', 'Jounieh', 'Zahlé', 'Aley'],
+  'Libya': ['Tripoli', 'Benghazi', 'Misrata', 'Bayda', 'Zawiya', 'Ajdabiya', 'Al Khums', 'Sirte'],
+  'Lithuania': ['Vilnius', 'Kaunas', 'Klaipėda', 'Šiauliai', 'Panevėžys', 'Alytus', 'Marijampolė', 'Mažeikiai'],
+  'Luxembourg': ['Luxembourg City', 'Esch-sur-Alzette', 'Differdange', 'Dudelange', 'Ettelbruck', 'Diekirch', 'Wiltz', 'Echternach'],
+  'Madagascar': ['Antananarivo', 'Toamasina', 'Antsirabe', 'Mahajanga', 'Fianarantsoa', 'Toliara', 'Antsiranana', 'Nosy Be'],
+  'Malaysia': ['Kuala Lumpur', 'George Town', 'Ipoh', 'Shah Alam', 'Petaling Jaya', 'Johor Bahru', 'Kota Kinabalu', 'Kuantan'],
+  'Maldives': ['Malé', 'Addu City', 'Fuvahmulah', 'Thinadhoo', 'Naifaru', 'Dhidhdhoo', 'Kulhudhuffushi', 'Eydhafushi'],
+  'Malta': ['Valletta', 'Birkirkara', 'Sliema', 'Mosta', 'Qormi', 'Żabbar', 'Naxxar', 'San Ġwann'],
+  'Mexico': ['Mexico City', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Juárez', 'Cancún'],
+  'Mongolia': ['Ulaanbaatar', 'Erdenet', 'Darkhan', 'Choibalsan', 'Ölgii', 'Khovd', 'Mörön', 'Ulaangom'],
+  'Morocco': ['Casablanca', 'Rabat', 'Marrakesh', 'Fez', 'Tangier', 'Agadir', 'Salé', 'Oujda'],
+  'Nepal': ['Kathmandu', 'Pokhara', 'Lalitpur', 'Bharatpur', 'Birgunj', 'Biratnagar', 'Janakpur', 'Butwal'],
+  'Netherlands': ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Groningen', 'Tilburg', 'Almere'],
+  'New Zealand': ['Auckland', 'Wellington', 'Christchurch', 'Hamilton', 'Tauranga', 'Dunedin', 'Palmerston North', 'Napier'],
+  'Nicaragua': ['Managua', 'León', 'Masaya', 'Matagalpa', 'Chinandega', 'Estelí', 'Granada', 'Jinotega'],
+  'Nigeria': ['Lagos', 'Kano', 'Ibadan', 'Abuja', 'Port Harcourt', 'Benin City', 'Kaduna', 'Maiduguri'],
+  'Norway': ['Oslo', 'Bergen', 'Trondheim', 'Stavanger', 'Bærum', 'Drammen', 'Fredrikstad', 'Sandnes'],
+  'Oman': ['Muscat', 'Seeb', 'Salalah', 'Bawshar', 'Sohar', 'As Suwayq', 'Ibri', 'Saham'],
+  'Pakistan': ['Karachi', 'Lahore', 'Islamabad', 'Faisalabad', 'Rawalpindi', 'Gujranwala', 'Multan', 'Peshawar'],
+  'Panama': ['Panama City', 'Colón', 'David', 'La Chorrera', 'Santiago', 'Chitré', 'Penonomé', 'Bocas del Toro'],
+  'Paraguay': ['Asunción', 'Ciudad del Este', 'San Lorenzo', 'Luque', 'Capiatá', 'Lambaré', 'Fernando de la Mora', 'Encarnación'],
+  'Peru': ['Lima', 'Arequipa', 'Trujillo', 'Chiclayo', 'Piura', 'Cusco', 'Huancayo', 'Iquitos'],
+  'Philippines': ['Manila', 'Quezon City', 'Davao', 'Caloocan', 'Cebu City', 'Zamboanga', 'Antipolo', 'Pasig'],
+  'Poland': ['Warsaw', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 'Gdańsk', 'Szczecin', 'Bydgoszcz'],
+  'Portugal': ['Lisbon', 'Porto', 'Vila Nova de Gaia', 'Amadora', 'Braga', 'Coimbra', 'Funchal', 'Setúbal'],
+  'Qatar': ['Doha', 'Al Rayyan', 'Umm Salal', 'Al Khor', 'Al Wakrah', 'Al Khawr', 'Lusail', 'Dukhan'],
+  'Romania': ['Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Craiova', 'Brașov', 'Galați'],
+  'Russia': ['Moscow', 'Saint Petersburg', 'Novosibirsk', 'Yekaterinburg', 'Kazan', 'Nizhny Novgorod', 'Samara', 'Omsk'],
+  'Saudi Arabia': ['Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Tabuk', 'Buraidah', 'Khobar'],
+  'Senegal': ['Dakar', 'Pikine', 'Touba', 'Thiès', 'Guédiawaye', 'Rufisque', 'M\'Bour', 'Saint-Louis'],
+  'Serbia': ['Belgrade', 'Novi Sad', 'Niš', 'Kragujevac', 'Subotica', 'Leskovac', 'Zrenjanin', 'Pančevo'],
+  'Singapore': ['Singapore'],
+  'Slovakia': ['Bratislava', 'Košice', 'Prešov', 'Žilina', 'Nitra', 'Banská Bystrica', 'Trnava', 'Martin'],
+  'Slovenia': ['Ljubljana', 'Maribor', 'Celje', 'Kranj', 'Velenje', 'Koper', 'Novo Mesto', 'Ptuj'],
+  'South Africa': ['Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Port Elizabeth', 'Bloemfontein', 'East London', 'Polokwane'],
+  'South Korea': ['Seoul', 'Busan', 'Incheon', 'Daegu', 'Daejeon', 'Gwangju', 'Ulsan', 'Suwon'],
+  'Spain': ['Madrid', 'Barcelona', 'Valencia', 'Seville', 'Zaragoza', 'Málaga', 'Murcia', 'Palma'],
+  'Sri Lanka': ['Colombo', 'Kandy', 'Galle', 'Jaffna', 'Negombo', 'Anuradhapura', 'Batticaloa', 'Trincomalee'],
+  'Sudan': ['Khartoum', 'Omdurman', 'Khartoum North', 'Port Sudan', 'Kassala', 'El Obeid', 'Wad Madani', 'Al-Qadarif'],
+  'Sweden': ['Stockholm', 'Gothenburg', 'Malmö', 'Uppsala', 'Västerås', 'Örebro', 'Linköping', 'Helsingborg'],
+  'Switzerland': ['Zurich', 'Geneva', 'Basel', 'Lausanne', 'Bern', 'Winterthur', 'Lucerne', 'St. Gallen'],
+  'Syria': ['Damascus', 'Aleppo', 'Homs', 'Latakia', 'Hama', 'Raqqa', 'Deir ez-Zor', 'Al-Hasakah'],
+  'Taiwan': ['Taipei', 'New Taipei City', 'Kaohsiung', 'Taichung', 'Tainan', 'Taoyuan', 'Hsinchu', 'Keelung'],
+  'Tajikistan': ['Dushanbe', 'Khujand', 'Kulob', 'Qurghonteppa', 'Istaravshan', 'Panjakent', 'Khorugh', 'Vahdat'],
+  'Tanzania': ['Dar es Salaam', 'Mwanza', 'Zanzibar City', 'Arusha', 'Mbeya', 'Morogoro', 'Dodoma', 'Tanga'],
+  'Thailand': ['Bangkok', 'Chiang Mai', 'Pattaya', 'Phuket', 'Hat Yai', 'Udon Thani', 'Nakhon Ratchasima', 'Khon Kaen'],
+  'Tunisia': ['Tunis', 'Sfax', 'Sousse', 'Ettadhamen', 'Kairouan', 'Gabès', 'Bizerte', 'Aryanah'],
+  'Turkey': ['Istanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Konya', 'Adana', 'Gaziantep'],
+  'Turkmenistan': ['Ashgabat', 'Türkmenabat', 'Daşoguz', 'Mary', 'Balkanabat', 'Bayramaly', 'Tejen', 'Abadan'],
+  'Uganda': ['Kampala', 'Entebbe', 'Jinja', 'Mbarara', 'Gulu', 'Mbale', 'Masaka', 'Fort Portal'],
+  'Ukraine': ['Kyiv', 'Kharkiv', 'Odesa', 'Dnipro', 'Donetsk', 'Zaporizhzhia', 'Lviv', 'Kryvyi Rih'],
+  'United Arab Emirates': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Al Ain', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain'],
+  'United Kingdom': ['London', 'Manchester', 'Birmingham', 'Glasgow', 'Liverpool', 'Leeds', 'Sheffield', 'Bristol'],
+  'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego'],
+  'Uruguay': ['Montevideo', 'Salto', 'Ciudad de la Costa', 'Paysandú', 'Las Piedras', 'Rivera', 'Maldonado', 'Tacuarembó'],
+  'Uzbekistan': ['Tashkent', 'Namangan', 'Samarkand', 'Andijan', 'Bukhara', 'Nukus', 'Qarshi', 'Kokand'],
+  'Venezuela': ['Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Maracay', 'Ciudad Guayana', 'San Cristóbal', 'Maturín'],
+  'Vietnam': ['Ho Chi Minh City', 'Hanoi', 'Da Nang', 'Hai Phong', 'Can Tho', 'Bien Hoa', 'Hue', 'Nha Trang'],
+  'Yemen': ['Sana\'a', 'Aden', 'Taiz', 'Al Hudaydah', 'Ibb', 'Dhamar', 'Mukalla', 'Seiyun'],
+  'Zambia': ['Lusaka', 'Kitwe', 'Ndola', 'Kabwe', 'Livingstone', 'Luanshya', 'Chipata', 'Chingola'],
+  'Zimbabwe': ['Harare', 'Bulawayo', 'Chitungwiza', 'Mutare', 'Gweru', 'Epworth', 'Kwekwe', 'Kadoma']
+};
+
+// Function to populate city dropdown based on selected country
+function populateCityDropdown(selectedCountry) {
+  const citySelect = document.querySelector('select[name="city"]');
+  const currentCity = originalValues.city || '';
+
+  // Clear existing options
+  citySelect.innerHTML = '<option value="" disabled selected>Select a city</option>';
+
+  if (selectedCountry) {
+    // Show city dropdown and required mark for ALL countries
+    citySelect.style.display = 'block';
+    document.getElementById('cityRequired').style.display = 'inline';
+
+    // Populate with cities if we have them, otherwise just "Other"
+    if (citiesByCountry[selectedCountry]) {
+      citiesByCountry[selectedCountry].forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        if (city === currentCity) {
+          option.selected = true;
+        }
+        citySelect.appendChild(option);
+      });
+    }
+
+    // Always add "Other" option
+    const otherOption = document.createElement('option');
+    otherOption.value = 'Other';
+    otherOption.textContent = 'Other (not listed)';
+    if ('Other' === currentCity) {
+      otherOption.selected = true;
+    }
+    citySelect.appendChild(otherOption);
+  } else {
+    // Hide city dropdown and required mark when no country selected
+    citySelect.style.display = 'none';
+    document.getElementById('cityRequired').style.display = 'none';
+    document.querySelector('.city-error').style.display = 'none';
+  }
+}
+
+// Handle country selection change
+const countrySelect = document.querySelector('select[name="country"]');
+if (countrySelect) {
+  countrySelect.addEventListener('change', function() {
+    populateCityDropdown(this.value);
+  });
+}
+
+// Form validation for city
+const profileForm = document.getElementById('profileForm');
+if (profileForm) {
+  profileForm.addEventListener('submit', function(e) {
+    const country = countrySelect.value;
+    const citySelect = document.querySelector('select[name="city"]');
+    const city = citySelect ? citySelect.value : '';
+
+    // Show city error if country is selected but city is empty
+    if (country && !city) {
+      e.preventDefault();
+      document.querySelector('.city-error').textContent = 'Please select a city for your country.';
+      document.querySelector('.city-error').style.display = 'block';
+      citySelect.focus();
+      return false;
+    }
+  });
+}
+
+// Store original city in edit mode
+const originalEnterEditMode = enterEditMode;
+enterEditMode = function() {
+  // Store current values BEFORE entering edit mode
+  originalValues.city = document.querySelector('select[name="city"]')?.value || '';
+  originalEnterEditMode(); // This stores username, email, country
+  populateCityDropdown(originalValues.country);
+};
 
 // Album Version Selection
 const versionCheckboxes = document.querySelectorAll('input[name="version_ids"]');

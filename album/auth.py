@@ -482,9 +482,12 @@ def profile():
         if country and country not in valid_countries:
             errors.append("Invalid country selected.")
 
-        # Validate city (optional, max 100 characters)
-        if city and len(city) > 100:
-            errors.append("City name must be less than 100 characters.")
+        # Validate city (required for ALL countries)
+        if country:
+            if not city:
+                errors.append("City is required for the selected country.")
+            elif len(city) > 100:
+                errors.append("City name must be less than 100 characters.")
 
         if errors:
             for error in errors:
