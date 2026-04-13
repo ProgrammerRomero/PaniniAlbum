@@ -4,711 +4,6 @@
 
 {% block content %}
 
-<script>
-  (function () {
-    // User data for search filtering - manually build serializable structure
-    // Searches by: trader name, country, city OR stickers in "You Can Get" (trader's duplicates = can_receive)
-    const usersData = [
-      {% for data in users_data %}
-    {
-    username: {{ data.user.username | tojson }},
-    country: {{ data.user.country | tojson }},
-    city: {{ data.user.city | tojson }},
-    canReceive: {{ data.can_receive | tojson }}
-    }{% if not loop.last %},{% endif %}
-      {% endfor %}
-    ];
-
-    // Track current trade data
-    let currentTradeData = {
-      username: null,
-      tradeType: null,
-      stickers: [],
-      selectedStickers: new Set()
-    };
-
-    // Filter users by search query
-    function filterUsers(query) {
-      const normalizedQuery = query.toLowerCase().trim();
-      const userCards = document.querySelectorAll('.user-card');
-      const noResults = document.getElementById('noResults');
-
-      if (!normalizedQuery) {
-        // Show all - reset to default (grid item)
-        userCards.forEach(card => card.style.display = '');
-        noResults.style.display = 'none';
-        return;
-      }
-
-      let visibleCount = 0;
-
-      userCards.forEach((card, index) => {
-        const userData = usersData[index];
-        if (!userData) return;
-
-        const usernameMatch = userData.username.toLowerCase().includes(normalizedQuery);
-        const countryMatch = userData.country && userData.country.toLowerCase().includes(normalizedQuery);
-        const cityMatch = userData.city && userData.city.toLowerCase().includes(normalizedQuery);
-        // Check if any sticker ID contains the search query (partial match)
-        const stickerMatch = userData.canReceive.some(s => s.toLowerCase().includes(normalizedQuery));
-
-        if (usernameMatch || countryMatch || cityMatch || stickerMatch) {
-          // Reset to default display (grid item behavior)
-          card.style.display = '';
-          visibleCount++;
-        } else {
-          card.style.display = 'none';
-        }
-      });
-
-      noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-    }
-
-    // Debounce search input
-    let searchTimeout;
-    document.addEventListener('DOMContentLoaded', function () {
-      const searchInput = document.getElementById('userSearch');
-      if (searchInput) {
-        searchInput.addEventListener('input', function (e) {
-          clearTimeout(searchTimeout);
-          searchTimeout = setTimeout(() => filterUsers(e.target.value), 300);
-        });
-
-        // Search on Enter key
-        searchInput.addEventListener('keypress', function (e) {
-          if (e.key === 'Enter') {
-            clearTimeout(searchTimeout);
-            filterUsers(e.target.value);
-          }
-        });
-      }
-
-      // Click handlers for user cards (expand in modal)
-      const userCardModal = document.getElementById('userCardModal');
-      const modalCardContainer = document.getElementById('modalCardContainer');
-      const modalCloseBtn = userCardModal.querySelector('.modal-close-btn');
-      const modalBackdrop = userCardModal.querySelector('.user-card-modal-backdrop');
-
-      document.querySelectorAll('.user-card').forEach(card => {
-        card.addEventListener('click', function (e) {
-          // Don't expand if clicking on a trade block
-          if (e.target.closest('.trade-block')) return;
-
-          // Clone the card and show in modal
-          const clonedCard = this.cloneNode(true);
-          // Remove any expanded class from clone
-          clonedCard.classList.remove('expanded');
-          // Add click handlers to trade blocks in cloned card
-          const tradeBlocks = clonedCard.querySelectorAll('.trade-block.clickable');
-          tradeBlocks.forEach(block => {
-            block.onclick = function(e) {
-              e.stopPropagation();
-              openTradeModal(this);
-            };
-          });
-
-          modalCardContainer.innerHTML = '';
-          modalCardContainer.appendChild(clonedCard);
-          userCardModal.classList.add('active');
-        });
-      });
-
-      // Close modal when clicking close button
-      if (modalCloseBtn) {
-        modalCloseBtn.addEventListener('click', function() {
-          userCardModal.classList.remove('active');
-          modalCardContainer.innerHTML = '';
-        });
-      }
-
-      // Close modal when clicking backdrop
-      if (modalBackdrop) {
-        modalBackdrop.addEventListener('click', function() {
-          userCardModal.classList.remove('active');
-          modalCardContainer.innerHTML = '';
-        });
-      }
-    });
-
-    function clearSearch() {
-      const searchInput = document.getElementById('userSearch');
-      if (searchInput) {
-        searchInput.value = '';
-        filterUsers('');
-        searchInput.focus();
-      }
-    }
-
-    // Modal functions
-    function openModal(modalId) {
-      const modal = document.getElementById(modalId);
-      if (modal) {
-        modal.classList.add('active');
-      }
-    }
-
-    function closeModal(modalId) {
-      const modal = document.getElementById(modalId);
-      if (modal) {
-        modal.classList.remove('active');
-      }
-    }
-
-    function openTradeModal(element) {
-      // Don't open if not clickable
-      if (!element.classList.contains('clickable')) return;
-
-      // Stop propagation to prevent card expansion
-      event.stopPropagation();
-
-      const tradeType = element.dataset.tradeType;
-      const username = element.dataset.username;
-      const stickers = JSON.parse(element.dataset.stickers || '[]');
-      const count = parseInt(element.dataset.count) || 0;
-
-      if (count === 0) return;
-
-      // Store current trade data - stickers NOT pre-selected, user must pick
-      currentTradeData = {
-        username,
-        tradeType,
-        stickers,
-        selectedStickers: new Set() // Start with empty selection
-      };
-
-      // Update modal content
-      const modalTitle = document.getElementById('tradeModalTitle');
-      const modalSubtitle = document.getElementById('tradeModalSubtitle');
-      const stickersGrid = document.getElementById('tradeModalGrid');
-      const selectedCount = document.getElementById('selectionCount');
-      const actionButton = document.getElementById('contactTradeBtn');
-      const modalIcon = document.getElementById('tradeModalIcon');
-      const modalCount = document.getElementById('tradeModalCount');
-
-      modalTitle.textContent = tradeType === 'receive' ? 'You Can Get' : 'You Can Give';
-      if (modalSubtitle) {
-        modalSubtitle.innerHTML = `Stickers available from <strong>${escapeHtml(username)}</strong>`;
-      }
-      if (modalIcon) {
-        modalIcon.textContent = tradeType === 'receive' ? '📥' : '📤';
-      }
-      if (modalCount) {
-        modalCount.textContent = `${stickers.length} sticker${stickers.length !== 1 ? 's' : ''}`;
-      }
-
-      // Render stickers - NOT pre-selected, with checkbox
-      stickersGrid.innerHTML = stickers.map(stickerId => `
-    <div class="sticker-select-item"
-         data-sticker-id="${escapeHtml(stickerId)}"
-         onclick="toggleStickerSelection(this, '${escapeHtml(stickerId)}')">
-      <span class="sticker-select-id">${escapeHtml(stickerId)}</span>
-      <input type="checkbox" class="sticker-checkbox"
-             onchange="event.stopPropagation(); toggleStickerSelection(this.parentElement, '${escapeHtml(stickerId)}')">
-    </div>
-  `).join('');
-
-      selectedCount.textContent = `0 selected`;
-
-      // Disable contact button initially since no stickers selected
-      if (actionButton) {
-        actionButton.disabled = true;
-        actionButton.style.opacity = '0.5';
-      }
-
-      // Show modal
-      openModal('tradeModal');
-    }
-
-    function toggleStickerSelection(element, stickerId) {
-      const isSelected = element.classList.contains('selected');
-      const checkbox = element.querySelector('.sticker-checkbox');
-
-      if (isSelected) {
-        element.classList.remove('selected');
-        currentTradeData.selectedStickers.delete(stickerId);
-        if (checkbox) checkbox.checked = false;
-      } else {
-        element.classList.add('selected');
-        currentTradeData.selectedStickers.add(stickerId);
-        if (checkbox) checkbox.checked = true;
-      }
-
-      // Update count
-      const selectedCount = document.getElementById('selectionCount');
-      if (selectedCount) {
-        selectedCount.textContent = `${currentTradeData.selectedStickers.size} selected`;
-      }
-
-      // Update button state
-      const actionButton = document.getElementById('contactTradeBtn');
-      if (actionButton) {
-        actionButton.disabled = currentTradeData.selectedStickers.size === 0;
-        actionButton.style.opacity = currentTradeData.selectedStickers.size === 0 ? '0.5' : '1';
-      }
-    }
-
-    function closeTradeModal() {
-      closeModal('tradeModal');
-      currentTradeData.selectedStickers.clear();
-    }
-
-    function openComposeModal() {
-      if (currentTradeData.selectedStickers.size === 0) {
-        alert('Please select at least one sticker.');
-        return;
-      }
-
-      const modal = document.getElementById('composeModal');
-      const recipientEl = document.getElementById('composeRecipient');
-      const stickersGrid = document.getElementById('composeStickersGrid');
-      const messageTextarea = document.getElementById('tradeMessage');
-
-      // Set recipient
-      recipientEl.textContent = currentTradeData.username;
-
-      // Populate selected stickers
-      const selectedStickerIds = Array.from(currentTradeData.selectedStickers);
-      stickersGrid.innerHTML = selectedStickerIds.map(stickerId => `
-    <div class="compose-sticker-item ${currentTradeData.tradeType}">
-      <span class="compose-sticker-id">${escapeHtml(stickerId)}</span>
-    </div>
-  `).join('');
-
-      // Generate default message
-      const currentUser = '{{ current_user.username }}';
-      const stickerList = selectedStickerIds.join(', ');
-      const tradeTypeText = currentTradeData.tradeType === 'receive' ? 'get' : 'give';
-
-      const defaultMessage = `Hi there! My name is ${currentUser}.\n\n` +
-        `I would like to ${tradeTypeText} these stickers: ${stickerList}.\n\n` +
-        `Can we please trade? Let me know what you have available or what you're looking for!\n\n` +
-        `Thanks,\n${currentUser}`;
-
-      messageTextarea.value = defaultMessage;
-
-      // Show modal
-      modal.classList.add('active');
-    }
-
-    function closeComposeModal() {
-      const modal = document.getElementById('composeModal');
-      modal.classList.remove('active');
-    }
-
-    // Send trade message
-    async function sendTradeMessage() {
-      const messageTextarea = document.getElementById('tradeMessage');
-      const message = messageTextarea.value.trim();
-
-      if (!message) {
-        alert('Please write a message.');
-        return;
-      }
-
-      const submitBtn = document.getElementById('sendTradeBtn');
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = 'Sending...';
-      submitBtn.disabled = true;
-
-      try {
-        const response = await fetch('/auth/api/messages/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token() }}'
-          },
-          body: JSON.stringify({
-            recipient_username: currentTradeData.username,
-            content: message,
-            stickers: Array.from(currentTradeData.selectedStickers)
-          })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          // Close compose modal
-          closeComposeModal();
-          // Close trade modal
-          closeTradeModal();
-          // Show success toast
-          showSuccessToast();
-        } else {
-          alert(data.error || 'Failed to send message. Please try again.');
-        }
-      } catch (error) {
-        console.error('Error sending message:', error);
-        alert('An error occurred. Please try again.');
-      } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-      }
-    }
-
-    // Success toast
-    function showSuccessToast() {
-      const toast = document.getElementById('successToast');
-      toast.classList.add('active');
-      setTimeout(() => {
-        toast.classList.remove('active');
-      }, 5000);
-    }
-
-    function closeSuccessToast() {
-      const toast = document.getElementById('successToast');
-      toast.classList.remove('active');
-    }
-
-    // Close modals on Escape key
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        const composeModal = document.getElementById('composeModal');
-        const tradeModal = document.getElementById('tradeModal');
-        const userCardModal = document.getElementById('userCardModal');
-        const modalCardContainer = document.getElementById('modalCardContainer');
-
-        if (composeModal.classList.contains('active')) {
-          closeComposeModal();
-        } else if (tradeModal.classList.contains('active')) {
-          closeTradeModal();
-        } else if (userCardModal.classList.contains('active')) {
-          userCardModal.classList.remove('active');
-          modalCardContainer.innerHTML = '';
-        }
-      }
-    });
-
-    // Escape HTML to prevent XSS
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    // Expose functions to global scope for inline onclick handlers
-    window.openModal = openModal;
-    window.closeModal = closeModal;
-    window.openTradeModal = openTradeModal;
-    window.toggleStickerSelection = toggleStickerSelection;
-    window.closeTradeModal = closeTradeModal;
-    window.openComposeModal = openComposeModal;
-    window.closeComposeModal = closeComposeModal;
-    window.sendTradeMessage = sendTradeMessage;
-    window.showSuccessToast = showSuccessToast;
-    window.closeSuccessToast = closeSuccessToast;
-    window.clearSearch = clearSearch;
-    window.filterUsers = filterUsers;
-  })();
-</script>
-
-<section class="auth-section users-section">
-  <div class="users-container">
-
-    <!-- Header -->
-    <header class="users-header">
-      <div class="header-top">
-        <h1 class="users-title">👥 Other Collectors</h1>
-        <div class="search-container">
-          <!-- Info tooltip -->
-          <div class="search-info-wrapper">
-            <span class="search-info-icon" title="">ℹ️</span>
-            <div class="search-info-tooltip">
-              <strong>Search Guide:</strong><br>
-              You can search by:<br>
-              • User Names (e.g., "john")<br>
-              • Country (e.g., "Australia")<br>
-              • City (e.g., "Sydney")<br>
-              • Stickers from "You Can Get" (e.g., "bra-17")
-            </div>
-          </div>
-          <input type="text" id="userSearch" class="search-input"
-            placeholder="Search by name, country, city or sticker (e.g., bra-17)..." autocomplete="off">
-          <button class="search-btn" onclick="clearSearch()" title="Clear search">✕</button>
-        </div>
-      </div>
-      <p class="users-subtitle">
-        Find trading partners! Users are sorted by compatibility -
-        those with the most matches for your collection appear first.
-      </p>
-
-      <div class="current-user-stats">
-        <span class="stat-badge">
-          📦 You have <strong>{{ current_duplicates_count }}</strong> duplicates to trade
-        </span>
-        <span class="stat-badge">
-          🔍 You need <strong>{{ current_missing_count }}</strong> stickers
-        </span>
-      </div>
-    </header>
-
-    <!-- No Results Message -->
-    <div id="noResults" class="no-results" style="display: none;">
-      <div class="empty-state">
-        <span class="empty-icon">🔍</span>
-        <h2>No Results Found</h2>
-        <p>No traders match your search. Try a different name or sticker number.</p>
-      </div>
-    </div>
-
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="flash-messages">
-      {% for category, message in messages %}
-      <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
-      {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
-
-    <!-- Users Grid -->
-    {% if users_data %}
-    <div class="users-grid">
-      {% for data in users_data %}
-      <div class="user-card {{ 'top-match' if data.can_receive_count > 0 else '' }}" data-user-index="{{ loop.index0 }}">
-
-        <!-- Card Header with Rank -->
-        <div class="user-card-header">
-          {% if loop.index <= 3 and data.can_receive_count > 0 %}
-            <div class="rank-badge rank-{{ loop.index }}">
-              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
-            </div>
-            {% endif %}
-
-            <div class="match-score {{ 'has-matches' if data.can_receive_count > 0 else '' }}">
-              <span class="match-label">You Can Get</span>
-              <span class="match-value">{{ data.can_receive_count }}</span>
-            </div>
-        </div>
-
-        <!-- User Info Section -->
-        <div class="user-info-section">
-          <div class="user-avatar">
-            {% if data.user.photo_url %}
-            <img src="{{ data.user.photo_url }}" alt="{{ data.user.username }}">
-            {% else %}
-            <div class="avatar-placeholder">{{ data.user.username[0]|upper }}</div>
-            {% endif %}
-          </div>
-
-          <div class="user-details">
-            <div class="user-name-row">
-              <h3 class="user-name">{{ data.user.username }}</h3>
-              <div class="user-stars">
-                {% if data.user.star_count > 0 %}
-                <span class="star-badge" title="{{ data.user.star_count }} completed trades">
-                  ⭐ {{ data.user.star_count }}
-                </span>
-                {% endif %}
-              </div>
-            </div>
-            {% if data.user.country %}
-            <div class="user-country">
-              <img src="https://flagcdn.com/w20/{{ country_codes.get(data.user.country, '').lower() }}.png"
-                alt="{{ data.user.country }}" class="user-country-flag" onerror="this.style.display='none'">
-              <span class="user-country-name">{{ data.user.country }}</span>
-            </div>
-            {% endif %}
-            {% if data.user.city %}
-            <div class="user-city">
-              <span class="city-icon">📍</span>
-              <span class="city-name">{{ data.user.city }}</span>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-
-        <!-- Collection Stats -->
-        <div class="collection-stats">
-          <div class="stat-item">
-            <span class="stat-value">{{ data.owned_count }}</span>
-            <span class="stat-label">Owned</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value">{{ data.duplicate_count }}</span>
-            <span class="stat-label">For Trade</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value">{{ data.completion }}%</span>
-            <span class="stat-label">Complete</span>
-          </div>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="progress-bar-container">
-          <div class="progress-bar" style="width: {{ data.completion }}%"></div>
-        </div>
-
-        <!-- Trading Section -->
-        <div class="trading-section">
-
-          <!-- What you can receive -->
-          <div
-            class="trade-block {{ 'has-items' if data.can_receive_count > 0 else '' }} {{ 'clickable' if data.can_receive_count > 0 else '' }}"
-            data-trade-type="receive" data-username="{{ data.user.username }}"
-            data-stickers='{{ data.can_receive | tojson }}' data-count="{{ data.can_receive_count }}"
-            onclick="event.stopPropagation(); openTradeModal(this)">
-            <div class="trade-header">
-              <span class="trade-icon">📥</span>
-              <span class="trade-title">You Can Get</span>
-              <span class="trade-count">{{ data.can_receive_count }}</span>
-            </div>
-
-            {% if data.can_receive_count > 0 %}
-            <div class="sticker-tags">
-              {% for sticker_id in data.can_receive[:5] %}
-              <span class="sticker-tag">{{ sticker_id }}</span>
-              {% endfor %}
-              {% if data.can_receive_count > 5 %}
-              <span class="more-tag">+{{ data.can_receive_count - 5 }} more →</span>
-              {% endif %}
-            </div>
-            {% else %}
-            <p class="no-trade">No duplicates you need</p>
-            {% endif %}
-          </div>
-
-          <!-- What you can give -->
-          <div
-            class="trade-block {{ 'has-items' if data.can_give_count > 0 else '' }} {{ 'clickable' if data.can_give_count > 0 else '' }}"
-            data-trade-type="give" data-username="{{ data.user.username }}" data-stickers='{{ data.can_give | tojson }}'
-            data-count="{{ data.can_give_count }}" onclick="event.stopPropagation(); openTradeModal(this)">
-            <div class="trade-header">
-              <span class="trade-icon">📤</span>
-              <span class="trade-title">You Can Give</span>
-              <span class="trade-count">{{ data.can_give_count }}</span>
-            </div>
-
-            {% if data.can_give_count > 0 %}
-            <div class="sticker-tags">
-              {% for sticker_id in data.can_give[:5] %}
-              <span class="sticker-tag give">{{ sticker_id }}</span>
-              {% endfor %}
-              {% if data.can_give_count > 5 %}
-              <span class="more-tag">+{{ data.can_give_count - 5 }} more →</span>
-              {% endif %}
-            </div>
-            {% else %}
-            <p class="no-trade">No matches for their needs</p>
-            {% endif %}
-          </div>
-        </div>
-
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="no-users-message">
-      <div class="empty-state">
-        <span class="empty-icon">👤</span>
-        <h2>No Other Users Yet</h2>
-        <p>You're the only registered user! Invite your friends to start trading stickers.</p>
-      </div>
-    </div>
-    {% endif %}
-
-  </div>
-</section>
-
-<!-- Expanded Card Modal -->
-<div id="userCardModal" class="user-card-modal">
-  <div class="user-card-modal-backdrop"></div>
-  <div class="user-card-modal-content">
-    <button class="modal-close-btn">&times;</button>
-    <div id="modalCardContainer">
-      <!-- Card content will be cloned here -->
-    </div>
-  </div>
-</div>
-
-<!-- Trade Stickers Modal -->
-<div id="tradeModal" class="trade-modal">
-  <div class="trade-modal-backdrop" onclick="closeTradeModal()"></div>
-  <div class="trade-modal-content">
-    <button class="trade-modal-close" onclick="closeTradeModal()">&times;</button>
-
-    <div class="trade-modal-header">
-      <div class="trade-modal-icon" id="tradeModalIcon">📥</div>
-      <h2 class="trade-modal-title" id="tradeModalTitle">You Can Get</h2>
-      <p class="trade-modal-subtitle" id="tradeModalSubtitle">
-        Stickers available from <strong>username</strong>
-      </p>
-    </div>
-
-    <div class="trade-modal-body">
-      <div class="trade-count-badge" id="tradeModalCount">0 stickers</div>
-      <div class="sticker-grid" id="tradeModalGrid">
-        <!-- Sticker cards will be populated here -->
-      </div>
-    </div>
-
-    <div class="trade-modal-footer">
-      <div class="trade-selection-info" id="tradeSelectionInfo">
-        <span class="selection-count" id="selectionCount">0 selected</span>
-      </div>
-      <div class="trade-modal-actions">
-        <button class="btn btn-secondary" onclick="closeTradeModal()">Close</button>
-        <button class="btn btn-primary" id="contactTradeBtn" onclick="openComposeModal()" disabled>
-          📧 Contact for Trade
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Compose Trade Message Modal -->
-<div id="composeModal" class="compose-modal">
-  <div class="compose-modal-backdrop" onclick="closeComposeModal()"></div>
-  <div class="compose-modal-content">
-    <button class="compose-modal-close" onclick="closeComposeModal()">&times;</button>
-
-    <div class="compose-modal-header">
-      <div class="compose-modal-icon">💌</div>
-      <h2 class="compose-modal-title">Send Trade Request</h2>
-      <p class="compose-modal-subtitle">Compose your message to <strong id="composeRecipient">username</strong></p>
-    </div>
-
-    <div class="compose-modal-body">
-      <!-- Selected Stickers Preview -->
-      <div class="compose-stickers-section">
-        <label class="compose-label">Selected Stickers:</label>
-        <div class="compose-stickers-grid" id="composeStickersGrid">
-          <!-- Selected stickers will be populated here -->
-        </div>
-      </div>
-
-      <!-- Message Composition -->
-      <div class="compose-message-section">
-        <label class="compose-label" for="tradeMessage">Your Message:</label>
-        <textarea id="tradeMessage" class="compose-textarea" rows="5"
-          placeholder="Write your trade request message here..."></textarea>
-        <div class="compose-hint">
-          💡 Tip: Be polite and mention what you can offer in exchange!
-        </div>
-      </div>
-    </div>
-
-    <div class="compose-modal-footer">
-      <button class="btn btn-secondary" onclick="closeComposeModal()">Cancel</button>
-      <button class="btn btn-success" id="sendTradeBtn" onclick="sendTradeMessage()">
-        🚀 Send Message
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Success Toast Notification -->
-<div id="successToast" class="success-toast">
-  <div class="success-toast-content">
-    <span class="success-toast-icon">✅</span>
-    <div class="success-toast-text">
-      <strong>Message Sent!</strong>
-      <span>Your trade request has been successfully sent.</span>
-    </div>
-    <button class="success-toast-close" onclick="closeSuccessToast()">&times;</button>
-  </div>
-</div>
-
 <style>
   /* Users Page Styles - Compact */
   .users-section {
@@ -948,95 +243,131 @@
     color: var(--color-accent);
   }
 
-  /* Users Grid - 5 cards per row, larger gap */
+  /* Users Grid - Optimized for Main Screen */
   .users-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+    max-width: 1600px;
+    margin: 0 auto;
   }
 
   /* User Card - 1.5x larger sizes */
   .user-card {
-    background: var(--color-bg-elevated);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 14px;
-    padding: 1rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 16px;
+    padding: 1.25rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .user-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong));
+    opacity: 0.6;
   }
 
   .user-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(56, 189, 248, 0.1);
+    border-color: rgba(56, 189, 248, 0.3);
   }
 
   .user-card.top-match {
-    border-color: rgba(56, 189, 248, 0.5);
-    box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
   }
 
-  /* Card Header - Larger */
+  .user-card.top-match::before {
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    opacity: 1;
+  }
+
+  /* Card Header - Modern Design */
   .user-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.6rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    min-height: 40px;
   }
 
   .rank-badge {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   }
 
   .match-score {
-    text-align: right;
-    padding: 0.5rem 0.8rem;
-    background: rgba(148, 163, 184, 0.1);
-    border-radius: 8px;
-    min-width: 70px;
+    text-align: center;
+    padding: 0.6rem 1rem;
+    background: rgba(148, 163, 184, 0.08);
+    border-radius: 10px;
+    min-width: 80px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    transition: all 0.2s ease;
   }
 
   .match-score.has-matches {
-    background: rgba(34, 197, 94, 0.15);
-    border: 1px solid rgba(34, 197, 94, 0.4);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
   }
 
   .match-label {
     display: block;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.15rem;
   }
 
   .match-value {
     display: block;
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-size: 1.4rem;
+    font-weight: 800;
     color: var(--color-text);
+    line-height: 1;
   }
 
   .match-score.has-matches .match-value {
     color: #22c55e;
+    text-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
   }
 
-  /* User Info Section - Larger */
+  /* User Info Section - Enhanced Design */
   .user-info-section {
     display: flex;
-    gap: 0.8rem;
-    margin-bottom: 0.7rem;
-    padding-bottom: 0.7rem;
-    border-bottom: 1px solid var(--color-border-subtle);
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
   }
 
   .user-avatar {
-    width: 44px;
-    height: 44px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
-    border: 2px solid var(--color-accent);
+    border: 2px solid rgba(56, 189, 248, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+  }
+
+  .user-card:hover .user-avatar {
+    transform: scale(1.05);
   }
 
   .user-avatar img {
@@ -1052,30 +383,36 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     font-weight: 700;
     color: #fff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
   .user-details {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0;
   }
 
   .user-name {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0 0 0.15rem 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 0.2rem 0;
     color: var(--color-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    letter-spacing: -0.01em;
   }
 
   .user-email {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--color-text-muted);
-    margin: 0 0 0.15rem 0;
+    margin: 0 0 0.2rem 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1084,201 +421,305 @@
   .user-since {
     font-size: 0.7rem;
     color: var(--color-text-muted);
-    opacity: 0.7;
+    opacity: 0.6;
   }
 
-  /* User Name Row with Stars */
-  .user-name-row {
+  /* User Info Row - Name, Country, City grouped with Badges */
+  .user-info-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.15rem;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
-  .user-name-row .user-name {
-    margin: 0;
+  .user-info-left {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    line-height: 1.2;
   }
 
+  .user-info-left .user-name {
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  /* User Stars - Vertical Layout */
   .user-stars {
     flex-shrink: 0;
-    margin-left: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    margin-top: 0;
   }
 
   .user-stars .star-badge {
     font-size: 0.8rem;
     color: #fbbf24;
-    font-weight: 500;
+    font-weight: 600;
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    padding: 0.15rem 0.4rem;
+    border-radius: 10px;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
   }
 
-  /* User Country Display */
+  .user-stars .star-badge:hover {
+    transform: scale(1.05);
+    background: rgba(251, 191, 36, 0.2);
+    border-color: rgba(251, 191, 36, 0.5);
+  }
+
+  /* Feedback Badges - Clickable with Hover */
+  .feedback-badge {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .feedback-badge.feedback-good {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .feedback-badge.feedback-good:hover {
+    transform: scale(1.05);
+    background: rgba(34, 197, 94, 0.25);
+    border-color: rgba(34, 197, 94, 0.5);
+  }
+
+  .feedback-badge.feedback-bad {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .feedback-badge.feedback-bad:hover {
+    transform: scale(1.05);
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+
+  /* User Country Display - Enhanced */
   .user-country {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    margin-top: 0.25rem;
+    gap: 0.25rem;
+    margin-top: 0;
+    line-height: 1;
   }
 
   .user-country-flag {
-    width: 16px;
-    height: 12px;
-    border-radius: 2px;
+    width: 18px;
+    height: 13px;
+    border-radius: 3px;
     object-fit: cover;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
   .user-country-name {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--color-text-muted);
+    font-weight: 500;
   }
 
-  /* User City Display */
+  /* User City Display - Enhanced */
   .user-city {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    margin-top: 0.15rem;
+    gap: 0.25rem;
+    margin-top: 0;
+    line-height: 1;
   }
 
   .city-icon {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
+    opacity: 0.8;
   }
 
   .city-name {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--color-text-muted);
     font-style: italic;
+    opacity: 0.9;
   }
 
-  /* Collection Stats - Larger */
+  /* Collection Stats - Modern Design */
   .collection-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.4rem;
-    margin-bottom: 0.6rem;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
   }
 
   .collection-stats .stat-item {
     text-align: center;
-    padding: 0.6rem 0.4rem;
-    background: rgba(15, 23, 42, 0.5);
-    border-radius: 8px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 0.75rem 0.3rem;
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(30, 41, 59, 0.4));
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    transition: all 0.2s ease;
+  }
+
+  .user-card:hover .collection-stats .stat-item {
+    border-color: rgba(148, 163, 184, 0.25);
   }
 
   .collection-stats .stat-value {
     display: block;
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1.15rem;
+    font-weight: 800;
     color: var(--color-accent);
+    line-height: 1.2;
   }
 
   .collection-stats .stat-label {
     display: block;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
-    margin-top: 0.1rem;
+    letter-spacing: 0.03em;
+    margin-top: 0.2rem;
+    font-weight: 500;
   }
 
-  /* Progress Bar - Larger */
+  /* Progress Bar - Enhanced */
   .progress-bar-container {
-    height: 5px;
-    background: rgba(148, 163, 184, 0.2);
+    height: 6px;
+    background: rgba(148, 163, 184, 0.15);
     border-radius: 3px;
-    margin-bottom: 0.8rem;
+    margin-bottom: 1rem;
     overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 
   .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong));
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong), var(--color-accent));
+    background-size: 200% 100%;
     border-radius: 3px;
-    transition: width 0.3s ease;
+    transition: width 0.5s ease;
+    animation: shimmer 2s infinite linear;
   }
 
-  /* Trading Section - Larger side-by-side */
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Trading Section - Enhanced Design */
   .trading-section {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    margin-bottom: 0.8rem;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+    flex-grow: 1;
   }
 
   .trade-block {
-    padding: 0.6rem;
-    background: rgba(15, 23, 42, 0.5);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 8px;
+    padding: 0.75rem;
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.5), rgba(30, 41, 59, 0.3));
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 10px;
+    transition: all 0.2s ease;
   }
 
   .trade-block.has-items {
-    background: rgba(34, 197, 94, 0.1);
+    background: linear-gradient(145deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
     border-color: rgba(34, 197, 94, 0.3);
+    cursor: pointer;
+  }
+
+  .trade-block.has-items:hover {
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+    transform: translateY(-2px);
   }
 
   .trade-header {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 0.4rem;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
   }
 
   .trade-icon {
-    font-size: 0.9rem;
+    font-size: 1rem;
   }
 
   .trade-title {
     flex: 1;
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   .trade-count {
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.9rem;
+    font-weight: 800;
     color: var(--color-accent);
     background: rgba(56, 189, 248, 0.2);
-    padding: 0.15rem 0.4rem;
-    border-radius: 4px;
-    min-width: 22px;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    min-width: 26px;
     text-align: center;
   }
 
   .trade-block.has-items .trade-count {
-    background: rgba(34, 197, 94, 0.3);
+    background: rgba(34, 197, 94, 0.25);
     color: #22c55e;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
   }
 
   .sticker-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 0.35rem;
   }
 
   .sticker-tag {
     font-size: 0.7rem;
-    padding: 0.15rem 0.35rem;
-    background: rgba(56, 189, 248, 0.2);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    border-radius: 4px;
+    padding: 0.2rem 0.45rem;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 5px;
     color: var(--color-text);
-    font-family: monospace;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+    transition: all 0.15s ease;
   }
 
   .sticker-tag.give {
-    background: rgba(249, 115, 22, 0.2);
-    border-color: rgba(249, 115, 22, 0.3);
+    background: rgba(249, 115, 22, 0.15);
+    border-color: rgba(249, 115, 22, 0.25);
   }
 
   .more-tag {
     font-size: 0.7rem;
-    padding: 0.15rem 0.35rem;
-    background: rgba(148, 163, 184, 0.2);
-    border-radius: 4px;
+    padding: 0.2rem 0.45rem;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 5px;
     color: var(--color-text-muted);
+    font-weight: 500;
   }
 
   .no-trade {
@@ -1286,6 +727,7 @@
     color: var(--color-text-muted);
     margin: 0;
     font-style: italic;
+    opacity: 0.7;
   }
 
   /* User Actions - Larger */
@@ -1443,22 +885,24 @@
     color: var(--color-text-muted);
   }
 
-  /* Responsive - 5 columns on desktop, scaling down */
+  /* Responsive - Auto-fit columns, scaling down gracefully */
   @media (max-width: 1400px) {
     .users-grid {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     }
   }
 
   @media (max-width: 1100px) {
     .users-grid {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
     }
   }
 
   @media (max-width: 800px) {
     .users-grid {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.75rem;
     }
   }
 
@@ -2198,5 +1642,779 @@
     }
   }
 
+  /* User Card Footer - View Profile Button */
+  .user-card-footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: center;
+  }
+
+  .btn-view-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-text);
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .btn-view-profile:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: rgba(56, 189, 248, 0.5);
+    transform: translateY(-1px);
+  }
+
+  /* Hide footer on small cards (grid view) - only show in modal */
+  .users-grid .user-card .user-card-footer {
+    display: none;
+  }
+
+  /* Show footer in modal */
+  .user-card-modal-content .user-card-footer {
+    display: flex;
+  }
+
 </style>
+
+<script>
+  (function () {
+    // User data for search filtering - manually build serializable structure
+    // Searches by: trader name, country, city OR stickers in "You Can Get" (trader's duplicates = can_receive)
+    const usersData = [
+      {% for data in users_data %}
+    {
+    username: {{ data.user.username | tojson }},
+    country: {{ data.user.country | tojson }},
+    city: {{ data.user.city | tojson }},
+    canReceive: {{ data.can_receive | tojson }}
+    }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    // Track current trade data
+    let currentTradeData = {
+      username: null,
+      tradeType: null,
+      stickers: [],
+      selectedStickers: new Set()
+    };
+
+    // Filter users by search query
+    function filterUsers(query) {
+      const normalizedQuery = query.toLowerCase().trim();
+      const userCards = document.querySelectorAll('.user-card');
+      const noResults = document.getElementById('noResults');
+
+      if (!normalizedQuery) {
+        // Show all - reset to default (grid item)
+        userCards.forEach(card => card.style.display = '');
+        noResults.style.display = 'none';
+        return;
+      }
+
+      let visibleCount = 0;
+
+      userCards.forEach((card, index) => {
+        const userData = usersData[index];
+        if (!userData) return;
+
+        const usernameMatch = userData.username.toLowerCase().includes(normalizedQuery);
+        const countryMatch = userData.country && userData.country.toLowerCase().includes(normalizedQuery);
+        const cityMatch = userData.city && userData.city.toLowerCase().includes(normalizedQuery);
+        // Check if any sticker ID contains the search query (partial match)
+        const stickerMatch = userData.canReceive.some(s => s.toLowerCase().includes(normalizedQuery));
+
+        if (usernameMatch || countryMatch || cityMatch || stickerMatch) {
+          // Reset to default display (grid item behavior)
+          card.style.display = '';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+
+    // Debounce search input
+    let searchTimeout;
+    document.addEventListener('DOMContentLoaded', function () {
+      const searchInput = document.getElementById('userSearch');
+      if (searchInput) {
+        searchInput.addEventListener('input', function (e) {
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => filterUsers(e.target.value), 300);
+        });
+
+        // Search on Enter key
+        searchInput.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') {
+            clearTimeout(searchTimeout);
+            filterUsers(e.target.value);
+          }
+        });
+      }
+
+      // Click handlers for user cards (expand in modal)
+      const userCardModal = document.getElementById('userCardModal');
+      const modalCardContainer = document.getElementById('modalCardContainer');
+      const modalCloseBtn = userCardModal.querySelector('.modal-close-btn');
+      const modalBackdrop = userCardModal.querySelector('.user-card-modal-backdrop');
+
+      document.querySelectorAll('.user-card').forEach(card => {
+        card.addEventListener('click', function (e) {
+          // Don't expand if clicking on a trade block
+          if (e.target.closest('.trade-block')) return;
+
+          // Clone the card and show in modal
+          const clonedCard = this.cloneNode(true);
+          // Remove any expanded class from clone
+          clonedCard.classList.remove('expanded');
+          // Add click handlers to trade blocks in cloned card
+          const tradeBlocks = clonedCard.querySelectorAll('.trade-block.clickable');
+          tradeBlocks.forEach(block => {
+            block.onclick = function(e) {
+              e.stopPropagation();
+              openTradeModal(this);
+            };
+          });
+
+          modalCardContainer.innerHTML = '';
+          modalCardContainer.appendChild(clonedCard);
+          userCardModal.classList.add('active');
+        });
+      });
+
+      // Close modal when clicking close button
+      if (modalCloseBtn) {
+        modalCloseBtn.addEventListener('click', function() {
+          userCardModal.classList.remove('active');
+          modalCardContainer.innerHTML = '';
+        });
+      }
+
+      // Close modal when clicking backdrop
+      if (modalBackdrop) {
+        modalBackdrop.addEventListener('click', function() {
+          userCardModal.classList.remove('active');
+          modalCardContainer.innerHTML = '';
+        });
+      }
+    });
+
+    function clearSearch() {
+      const searchInput = document.getElementById('userSearch');
+      if (searchInput) {
+        searchInput.value = '';
+        filterUsers('');
+        searchInput.focus();
+      }
+    }
+
+    // Modal functions
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.add('active');
+      }
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.remove('active');
+      }
+    }
+
+    function openTradeModal(element) {
+      // Don't open if not clickable
+      if (!element.classList.contains('clickable')) return;
+
+      // Stop propagation to prevent card expansion
+      event.stopPropagation();
+
+      const tradeType = element.dataset.tradeType;
+      const username = element.dataset.username;
+      const stickers = JSON.parse(element.dataset.stickers || '[]');
+      const count = parseInt(element.dataset.count) || 0;
+
+      if (count === 0) return;
+
+      // Store current trade data - stickers NOT pre-selected, user must pick
+      currentTradeData = {
+        username,
+        tradeType,
+        stickers,
+        selectedStickers: new Set() // Start with empty selection
+      };
+
+      // Update modal content
+      const modalTitle = document.getElementById('tradeModalTitle');
+      const modalSubtitle = document.getElementById('tradeModalSubtitle');
+      const stickersGrid = document.getElementById('tradeModalGrid');
+      const selectedCount = document.getElementById('selectionCount');
+      const actionButton = document.getElementById('contactTradeBtn');
+      const modalIcon = document.getElementById('tradeModalIcon');
+      const modalCount = document.getElementById('tradeModalCount');
+
+      modalTitle.textContent = tradeType === 'receive' ? 'You Can Get' : 'You Can Give';
+      if (modalSubtitle) {
+        modalSubtitle.innerHTML = `Stickers available from <strong>${escapeHtml(username)}</strong>`;
+      }
+      if (modalIcon) {
+        modalIcon.textContent = tradeType === 'receive' ? '📥' : '📤';
+      }
+      if (modalCount) {
+        modalCount.textContent = `${stickers.length} sticker${stickers.length !== 1 ? 's' : ''}`;
+      }
+
+      // Render stickers - NOT pre-selected, with checkbox
+      stickersGrid.innerHTML = stickers.map(stickerId => `
+    <div class="sticker-select-item"
+         data-sticker-id="${escapeHtml(stickerId)}"
+         onclick="toggleStickerSelection(this, '${escapeHtml(stickerId)}')">
+      <span class="sticker-select-id">${escapeHtml(stickerId)}</span>
+      <input type="checkbox" class="sticker-checkbox"
+             onchange="event.stopPropagation(); toggleStickerSelection(this.parentElement, '${escapeHtml(stickerId)}')">
+    </div>
+  `).join('');
+
+      selectedCount.textContent = `0 selected`;
+
+      // Disable contact button initially since no stickers selected
+      if (actionButton) {
+        actionButton.disabled = true;
+        actionButton.style.opacity = '0.5';
+      }
+
+      // Show modal
+      openModal('tradeModal');
+    }
+
+    function toggleStickerSelection(element, stickerId) {
+      const isSelected = element.classList.contains('selected');
+      const checkbox = element.querySelector('.sticker-checkbox');
+
+      if (isSelected) {
+        element.classList.remove('selected');
+        currentTradeData.selectedStickers.delete(stickerId);
+        if (checkbox) checkbox.checked = false;
+      } else {
+        element.classList.add('selected');
+        currentTradeData.selectedStickers.add(stickerId);
+        if (checkbox) checkbox.checked = true;
+      }
+
+      // Update count
+      const selectedCount = document.getElementById('selectionCount');
+      if (selectedCount) {
+        selectedCount.textContent = `${currentTradeData.selectedStickers.size} selected`;
+      }
+
+      // Update button state
+      const actionButton = document.getElementById('contactTradeBtn');
+      if (actionButton) {
+        actionButton.disabled = currentTradeData.selectedStickers.size === 0;
+        actionButton.style.opacity = currentTradeData.selectedStickers.size === 0 ? '0.5' : '1';
+      }
+    }
+
+    function closeTradeModal() {
+      closeModal('tradeModal');
+      currentTradeData.selectedStickers.clear();
+    }
+
+    function openComposeModal() {
+      if (currentTradeData.selectedStickers.size === 0) {
+        alert('Please select at least one sticker.');
+        return;
+      }
+
+      const modal = document.getElementById('composeModal');
+      const recipientEl = document.getElementById('composeRecipient');
+      const stickersGrid = document.getElementById('composeStickersGrid');
+      const messageTextarea = document.getElementById('tradeMessage');
+
+      // Set recipient
+      recipientEl.textContent = currentTradeData.username;
+
+      // Populate selected stickers
+      const selectedStickerIds = Array.from(currentTradeData.selectedStickers);
+      stickersGrid.innerHTML = selectedStickerIds.map(stickerId => `
+    <div class="compose-sticker-item ${currentTradeData.tradeType}">
+      <span class="compose-sticker-id">${escapeHtml(stickerId)}</span>
+    </div>
+  `).join('');
+
+      // Generate default message
+      const currentUser = '{{ current_user.username }}';
+      const stickerList = selectedStickerIds.join(', ');
+      const tradeTypeText = currentTradeData.tradeType === 'receive' ? 'get' : 'give';
+
+      const defaultMessage = `Hi there! My name is ${currentUser}.\n\n` +
+        `I would like to ${tradeTypeText} these stickers: ${stickerList}.\n\n` +
+        `Can we please trade? Let me know what you have available or what you're looking for!\n\n` +
+        `Thanks,\n${currentUser}`;
+
+      messageTextarea.value = defaultMessage;
+
+      // Show modal
+      modal.classList.add('active');
+    }
+
+    function closeComposeModal() {
+      const modal = document.getElementById('composeModal');
+      modal.classList.remove('active');
+    }
+
+    // Send trade message
+    async function sendTradeMessage() {
+      const messageTextarea = document.getElementById('tradeMessage');
+      const message = messageTextarea.value.trim();
+
+      if (!message) {
+        alert('Please write a message.');
+        return;
+      }
+
+      const submitBtn = document.getElementById('sendTradeBtn');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Sending...';
+      submitBtn.disabled = true;
+
+      try {
+        const response = await fetch('/auth/api/messages/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+          },
+          body: JSON.stringify({
+            recipient_username: currentTradeData.username,
+            content: message,
+            stickers: Array.from(currentTradeData.selectedStickers)
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Close compose modal
+          closeComposeModal();
+          // Close trade modal
+          closeTradeModal();
+          // Show success toast
+          showSuccessToast();
+        } else {
+          alert(data.error || 'Failed to send message. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        alert('An error occurred. Please try again.');
+      } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
+    }
+
+    // Success toast
+    function showSuccessToast() {
+      const toast = document.getElementById('successToast');
+      toast.classList.add('active');
+      setTimeout(() => {
+        toast.classList.remove('active');
+      }, 5000);
+    }
+
+    function closeSuccessToast() {
+      const toast = document.getElementById('successToast');
+      toast.classList.remove('active');
+    }
+
+    // Close modals on Escape key
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        const composeModal = document.getElementById('composeModal');
+        const tradeModal = document.getElementById('tradeModal');
+        const userCardModal = document.getElementById('userCardModal');
+        const modalCardContainer = document.getElementById('modalCardContainer');
+
+        if (composeModal.classList.contains('active')) {
+          closeComposeModal();
+        } else if (tradeModal.classList.contains('active')) {
+          closeTradeModal();
+        } else if (userCardModal.classList.contains('active')) {
+          userCardModal.classList.remove('active');
+          modalCardContainer.innerHTML = '';
+        }
+      }
+    });
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Expose functions to global scope for inline onclick handlers
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+    window.openTradeModal = openTradeModal;
+    window.toggleStickerSelection = toggleStickerSelection;
+    window.closeTradeModal = closeTradeModal;
+    window.openComposeModal = openComposeModal;
+    window.closeComposeModal = closeComposeModal;
+    window.sendTradeMessage = sendTradeMessage;
+    window.showSuccessToast = showSuccessToast;
+    window.closeSuccessToast = closeSuccessToast;
+    window.clearSearch = clearSearch;
+    window.filterUsers = filterUsers;
+  })();
+</script>
+
+<section class="auth-section users-section">
+  <div class="users-container">
+
+    <!-- Header -->
+    <header class="users-header">
+      <div class="header-top">
+        <h1 class="users-title">👥 Other Collectors</h1>
+        <div class="search-container">
+          <!-- Info tooltip -->
+          <div class="search-info-wrapper">
+            <span class="search-info-icon" title="">ℹ️</span>
+            <div class="search-info-tooltip">
+              <strong>Search Guide:</strong><br>
+              You can search by:<br>
+              • User Names (e.g., "john")<br>
+              • Country (e.g., "Australia")<br>
+              • City (e.g., "Sydney")<br>
+              • Stickers from "You Can Get" (e.g., "bra-17")
+            </div>
+          </div>
+          <input type="text" id="userSearch" class="search-input"
+            placeholder="Search by name, country, city or sticker (e.g., bra-17)..." autocomplete="off">
+          <button class="search-btn" onclick="clearSearch()" title="Clear search">✕</button>
+        </div>
+      </div>
+      <p class="users-subtitle">
+        Find trading partners! Users are sorted by compatibility -
+        those with the most matches for your collection appear first.
+      </p>
+
+      <div class="current-user-stats">
+        <span class="stat-badge">
+          📦 You have <strong>{{ current_duplicates_count }}</strong> duplicates to trade
+        </span>
+        <span class="stat-badge">
+          🔍 You need <strong>{{ current_missing_count }}</strong> stickers
+        </span>
+      </div>
+    </header>
+
+    <!-- No Results Message -->
+    <div id="noResults" class="no-results" style="display: none;">
+      <div class="empty-state">
+        <span class="empty-icon">🔍</span>
+        <h2>No Results Found</h2>
+        <p>No traders match your search. Try a different name or sticker number.</p>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Users Grid -->
+    {% if users_data %}
+    <div class="users-grid">
+      {% for data in users_data %}
+      <div class="user-card {{ 'top-match' if data.can_receive_count > 0 else '' }}" data-user-index="{{ loop.index0 }}">
+
+        <!-- Card Header with Rank -->
+        <div class="user-card-header">
+          {% if loop.index <= 3 and data.can_receive_count > 0 %}
+            <div class="rank-badge rank-{{ loop.index }}">
+              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
+            </div>
+            {% endif %}
+
+            <div class="match-score {{ 'has-matches' if data.can_receive_count > 0 else '' }}">
+              <span class="match-label">You Can Get</span>
+              <span class="match-value">{{ data.can_receive_count }}</span>
+            </div>
+        </div>
+
+        <!-- User Info Section -->
+        <div class="user-info-section">
+          <div class="user-avatar">
+            {% if data.user.photo_url %}
+            <img src="{{ data.user.photo_url }}" alt="{{ data.user.username }}">
+            {% else %}
+            <div class="avatar-placeholder">{{ data.user.username[0]|upper }}</div>
+            {% endif %}
+          </div>
+
+          <div class="user-details">
+            <div class="user-info-row">
+              <div class="user-info-left">
+                <h3 class="user-name">{{ data.user.username }}</h3>
+                {% if data.user.country %}
+                <div class="user-country">
+                  <img src="https://flagcdn.com/w20/{{ country_codes.get(data.user.country, '').lower() }}.png"
+                    alt="{{ data.user.country }}" class="user-country-flag" onerror="this.style.display='none'">
+                  <span class="user-country-name">{{ data.user.country }}</span>
+                </div>
+                {% endif %}
+                {% if data.user.city %}
+                <div class="user-city">
+                  <span class="city-icon">📍</span>
+                  <span class="city-name">{{ data.user.city }}</span>
+                </div>
+                {% endif %}
+              </div>
+              <div class="user-stars">
+                {% if data.user.star_count > 0 %}
+                <a href="{{ url_for('auth.user_detail', user_id=data.user.id) }}#feedback"
+                   class="star-badge"
+                   title="{{ data.user.star_count }} completed trades"
+                   onclick="event.stopPropagation();">
+                  ⭐ {{ data.user.star_count }}
+                </a>
+                {% endif %}
+                {% if data.good_feedback_count > 0 %}
+                <a href="{{ url_for('auth.user_detail', user_id=data.user.id) }}#feedback"
+                   class="feedback-badge feedback-good"
+                   title="{{ data.good_feedback_count }} good feedback"
+                   onclick="event.stopPropagation();">
+                  👍 {{ data.good_feedback_count }}
+                </a>
+                {% endif %}
+                {% if data.bad_feedback_count > 0 %}
+                <a href="{{ url_for('auth.user_detail', user_id=data.user.id) }}#feedback"
+                   class="feedback-badge feedback-bad"
+                   title="{{ data.bad_feedback_count }} bad feedback"
+                   onclick="event.stopPropagation();">
+                  ❌ {{ data.bad_feedback_count }}
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collection Stats -->
+        <div class="collection-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ data.owned_count }}</span>
+            <span class="stat-label">Owned</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ data.duplicate_count }}</span>
+            <span class="stat-label">For Trade</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ data.completion }}%</span>
+            <span class="stat-label">Complete</span>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: {{ data.completion }}%"></div>
+        </div>
+
+        <!-- Trading Section -->
+        <div class="trading-section">
+
+          <!-- What you can receive -->
+          <div
+            class="trade-block {{ 'has-items' if data.can_receive_count > 0 else '' }} {{ 'clickable' if data.can_receive_count > 0 else '' }}"
+            data-trade-type="receive" data-username="{{ data.user.username }}"
+            data-stickers='{{ data.can_receive | tojson }}' data-count="{{ data.can_receive_count }}"
+            onclick="event.stopPropagation(); openTradeModal(this)">
+            <div class="trade-header">
+              <span class="trade-icon">📥</span>
+              <span class="trade-title">You Can Get</span>
+              <span class="trade-count">{{ data.can_receive_count }}</span>
+            </div>
+
+            {% if data.can_receive_count > 0 %}
+            <div class="sticker-tags">
+              {% for sticker_id in data.can_receive[:5] %}
+              <span class="sticker-tag">{{ sticker_id }}</span>
+              {% endfor %}
+              {% if data.can_receive_count > 5 %}
+              <span class="more-tag">+{{ data.can_receive_count - 5 }} more →</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <p class="no-trade">No duplicates you need</p>
+            {% endif %}
+          </div>
+
+          <!-- What you can give -->
+          <div
+            class="trade-block {{ 'has-items' if data.can_give_count > 0 else '' }} {{ 'clickable' if data.can_give_count > 0 else '' }}"
+            data-trade-type="give" data-username="{{ data.user.username }}" data-stickers='{{ data.can_give | tojson }}'
+            data-count="{{ data.can_give_count }}" onclick="event.stopPropagation(); openTradeModal(this)">
+            <div class="trade-header">
+              <span class="trade-icon">📤</span>
+              <span class="trade-title">You Can Give</span>
+              <span class="trade-count">{{ data.can_give_count }}</span>
+            </div>
+
+            {% if data.can_give_count > 0 %}
+            <div class="sticker-tags">
+              {% for sticker_id in data.can_give[:5] %}
+              <span class="sticker-tag give">{{ sticker_id }}</span>
+              {% endfor %}
+              {% if data.can_give_count > 5 %}
+              <span class="more-tag">+{{ data.can_give_count - 5 }} more →</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <p class="no-trade">No matches for their needs</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- View Profile Button -->
+        <div class="user-card-footer">
+          <a href="{{ url_for('auth.user_detail', user_id=data.user.id) }}" class="btn btn-secondary btn-view-profile">
+            👤 View Profile
+          </a>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-users-message">
+      <div class="empty-state">
+        <span class="empty-icon">👤</span>
+        <h2>No Other Users Yet</h2>
+        <p>You're the only registered user! Invite your friends to start trading stickers.</p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<!-- Expanded Card Modal -->
+<div id="userCardModal" class="user-card-modal">
+  <div class="user-card-modal-backdrop"></div>
+  <div class="user-card-modal-content">
+    <button class="modal-close-btn">&times;</button>
+    <div id="modalCardContainer">
+      <!-- Card content will be cloned here -->
+    </div>
+  </div>
+</div>
+
+<!-- Trade Stickers Modal -->
+<div id="tradeModal" class="trade-modal">
+  <div class="trade-modal-backdrop" onclick="closeTradeModal()"></div>
+  <div class="trade-modal-content">
+    <button class="trade-modal-close" onclick="closeTradeModal()">&times;</button>
+
+    <div class="trade-modal-header">
+      <div class="trade-modal-icon" id="tradeModalIcon">📥</div>
+      <h2 class="trade-modal-title" id="tradeModalTitle">You Can Get</h2>
+      <p class="trade-modal-subtitle" id="tradeModalSubtitle">
+        Stickers available from <strong>username</strong>
+      </p>
+    </div>
+
+    <div class="trade-modal-body">
+      <div class="trade-count-badge" id="tradeModalCount">0 stickers</div>
+      <div class="sticker-grid" id="tradeModalGrid">
+        <!-- Sticker cards will be populated here -->
+      </div>
+    </div>
+
+    <div class="trade-modal-footer">
+      <div class="trade-selection-info" id="tradeSelectionInfo">
+        <span class="selection-count" id="selectionCount">0 selected</span>
+      </div>
+      <div class="trade-modal-actions">
+        <button class="btn btn-secondary" onclick="closeTradeModal()">Close</button>
+        <button class="btn btn-primary" id="contactTradeBtn" onclick="openComposeModal()" disabled>
+          📧 Contact for Trade
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compose Trade Message Modal -->
+<div id="composeModal" class="compose-modal">
+  <div class="compose-modal-backdrop" onclick="closeComposeModal()"></div>
+  <div class="compose-modal-content">
+    <button class="compose-modal-close" onclick="closeComposeModal()">&times;</button>
+
+    <div class="compose-modal-header">
+      <div class="compose-modal-icon">💌</div>
+      <h2 class="compose-modal-title">Send Trade Request</h2>
+      <p class="compose-modal-subtitle">Compose your message to <strong id="composeRecipient">username</strong></p>
+    </div>
+
+    <div class="compose-modal-body">
+      <!-- Selected Stickers Preview -->
+      <div class="compose-stickers-section">
+        <label class="compose-label">Selected Stickers:</label>
+        <div class="compose-stickers-grid" id="composeStickersGrid">
+          <!-- Selected stickers will be populated here -->
+        </div>
+      </div>
+
+      <!-- Message Composition -->
+      <div class="compose-message-section">
+        <label class="compose-label" for="tradeMessage">Your Message:</label>
+        <textarea id="tradeMessage" class="compose-textarea" rows="5"
+          placeholder="Write your trade request message here..."></textarea>
+        <div class="compose-hint">
+          💡 Tip: Be polite and mention what you can offer in exchange!
+        </div>
+      </div>
+    </div>
+
+    <div class="compose-modal-footer">
+      <button class="btn btn-secondary" onclick="closeComposeModal()">Cancel</button>
+      <button class="btn btn-success" id="sendTradeBtn" onclick="sendTradeMessage()">
+        🚀 Send Message
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Success Toast Notification -->
+<div id="successToast" class="success-toast">
+  <div class="success-toast-content">
+    <span class="success-toast-icon">✅</span>
+    <div class="success-toast-text">
+      <strong>Message Sent!</strong>
+      <span>Your trade request has been successfully sent.</span>
+    </div>
+    <button class="success-toast-close" onclick="closeSuccessToast()">&times;</button>
+  </div>
+</div>
+
 {% endblock %}

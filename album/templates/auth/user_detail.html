@@ -1,0 +1,1283 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }} - User Profile{% endblock %}
+
+{% block content %}
+<section class="auth-section">
+  <div class="auth-container profile-container">
+    <!-- Back Button -->
+    <div class="back-link">
+      <a href="{{ url_for('auth.users') }}" class="btn btn-secondary btn-sm">
+        ← Back to Users
+      </a>
+    </div>
+
+    <!-- User Header -->
+    <header class="auth-header user-detail-header">
+      <div class="user-detail-avatar">
+        {% if user.photo_url %}
+          <img src="{{ user.photo_url }}" alt="{{ user.username }}" class="user-detail-photo" onclick="window.location.href='{{ user.photo_url }}'" style="cursor: pointer;">
+        {% else %}
+          <div class="user-detail-photo-placeholder" onclick="window.location.href='{{ url_for('auth.user_detail', user_id=user.id) }}'" style="cursor: pointer;">
+            <span class="user-detail-initials">{{ user.username[0]|upper }}</span>
+          </div>
+        {% endif %}
+      </div>
+      <div class="user-detail-info">
+        <h1 class="auth-title user-detail-name" onclick="window.location.href='{{ url_for('auth.user_detail', user_id=user.id) }}'" style="cursor: pointer;">{{ user.username }}</h1>
+        <div class="user-detail-meta">
+          {% if user.country %}
+            <span class="user-detail-location">
+              <img src="https://flagcdn.com/w20/{{ country_codes.get(user.country, '').lower() }}.png"
+                   alt="{{ user.country }}" class="detail-flag"
+                   onerror="this.style.display='none'">
+              {{ user.city or '' }}{{ ', ' if user.city and user.country else '' }}{{ user.country }}
+            </span>
+          {% endif %}
+          <span class="user-detail-member">Member since {{ user.created_at.strftime('%B %Y') }}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Feedback Section -->
+    <div class="profile-card feedback-section">
+      <h2 class="card-title">📊 Reputation</h2>
+
+      <div class="feedback-stats">
+        <div class="feedback-stat feedback-stat-good">
+          <span class="feedback-icon">👍</span>
+          <span class="feedback-count" id="goodCount">{{ good_count }}</span>
+          <span class="feedback-label">Good Feedback</span>
+        </div>
+        <div class="feedback-stat feedback-stat-bad">
+          <span class="feedback-icon">❌</span>
+          <span class="feedback-count" id="badCount">{{ bad_count }}</span>
+          <span class="feedback-label">Bad Feedback</span>
+        </div>
+        <div class="feedback-stat feedback-stat-stars">
+          <span class="feedback-icon">⭐</span>
+          <span class="feedback-count">{{ user.star_count }}</span>
+          <span class="feedback-label">Completed Trades</span>
+        </div>
+      </div>
+
+      <!-- Your Feedback -->
+      <div class="your-feedback-section">
+        <div class="feedback-form-header">
+          <div class="feedback-form-icon">💬</div>
+          <div class="feedback-form-title">
+            <h3 class="feedback-subtitle">Share Your Experience</h3>
+            <p class="feedback-description">Your feedback helps other traders make informed decisions</p>
+          </div>
+        </div>
+
+        {% if not existing_feedback %}
+        <!-- Feedback Type Selection -->
+        <div class="feedback-type-selection">
+          <label class="feedback-type-label">Select feedback type *:</label>
+          <div class="feedback-buttons">
+            <button type="button" class="feedback-btn feedback-btn-good {% if existing_feedback and existing_feedback.feedback_type == 'good' %}active{% endif %}"
+                    onclick="selectFeedbackType('good')" id="btnGood" data-type="good">
+              <span class="feedback-btn-icon">👍</span>
+              <span class="feedback-btn-text">Good Trader</span>
+              <span class="feedback-btn-desc">Smooth trade, would recommend</span>
+            </button>
+            <button type="button" class="feedback-btn feedback-btn-bad {% if existing_feedback and existing_feedback.feedback_type == 'bad' %}active{% endif %}"
+                    onclick="selectFeedbackType('bad')" id="btnBad" data-type="bad">
+              <span class="feedback-btn-icon">❌</span>
+              <span class="feedback-btn-text">Bad Experience</span>
+              <span class="feedback-btn-desc">Issues with trade, be cautious</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Comment Input (Required) -->
+        <div class="feedback-comment-section" id="commentSection" style="display: none;">
+          <label for="feedbackComment" class="feedback-comment-label">
+            Tell us about your experience *
+            <span class="required-badge">required</span>
+          </label>
+          <textarea id="feedbackComment" class="feedback-comment-input" rows="4" minlength="5" maxlength="500"
+                    placeholder="Please describe your trading experience with {{ user.username }}. What went well? What could be improved? Your feedback helps the community."></textarea>
+          <div class="feedback-comment-footer">
+            <span class="feedback-comment-error" id="commentError">Please provide at least 5 characters</span>
+            <span class="feedback-comment-count"><span id="charCount">0</span>/500</span>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="feedback-submit-section" id="submitSection" style="display: none;">
+          <button type="button" class="feedback-submit-btn" onclick="submitFeedbackWithComment()" id="submitFeedbackBtn" disabled>
+            <span class="submit-icon">📝</span>
+            <span class="submit-text">Submit Feedback</span>
+          </button>
+        </div>
+        {% endif %}
+
+        {% if existing_feedback %}
+        <div class="existing-feedback-notice" id="existingFeedbackNotice">
+          <div class="existing-feedback-header">
+            <div class="existing-feedback-badge {% if existing_feedback.feedback_type == 'good' %}badge-good{% else %}badge-bad{% endif %}">
+              {% if existing_feedback.feedback_type == 'good' %}👍 Good Trader{% else %}❌ Bad Experience{% endif %}
+            </div>
+            <div class="existing-feedback-meta">
+              <span class="existing-feedback-date">{{ existing_feedback.created_at.strftime('%B %d, %Y') }}</span>
+              <button type="button" class="btn-remove-feedback" onclick="removeFeedback()" title="Remove your feedback">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="existing-feedback-comment-box">
+            <span class="comment-box-label">Your feedback:</span>
+            <p class="comment-box-text">"{{ existing_feedback.comment }}"</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Recent Feedback -->
+      {% if recent_feedback %}
+      <div class="recent-feedback-section">
+        <div class="recent-feedback-header">
+          <h3 class="feedback-subtitle">Recent Feedback</h3>
+          <span class="recent-feedback-count">{{ recent_feedback|length }} review{{ 's' if recent_feedback|length > 1 else '' }}</span>
+        </div>
+        <div class="recent-feedback-list">
+          {% for feedback in recent_feedback %}
+          <div class="recent-feedback-card {% if feedback.feedback_type == 'good' %}feedback-card-good{% else %}feedback-card-bad{% endif %}">
+            <div class="recent-feedback-header-row">
+              <div class="recent-feedback-user">
+                <div class="recent-feedback-avatar">
+                  {% if feedback.from_user.photo_url %}
+                  <img src="{{ feedback.from_user.photo_url }}" alt="{{ feedback.from_user.username }}">
+                  {% else %}
+                  <span class="feedback-avatar-initial">{{ feedback.from_user.username[0]|upper }}</span>
+                  {% endif %}
+                </div>
+                <div class="recent-feedback-info">
+                  <span class="recent-feedback-from">{{ feedback.from_user.username }}</span>
+                  <span class="recent-feedback-badge {{ feedback.feedback_type }}">
+                    {% if feedback.feedback_type == 'good' %}👍 Good Trader{% else %}❌ Bad Experience{% endif %}
+                  </span>
+                </div>
+              </div>
+              <span class="recent-feedback-date">{{ feedback.created_at.strftime('%b %d, %Y') }}</span>
+            </div>
+            <div class="recent-feedback-comment">
+              <svg class="comment-quote-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M4 10C4 7.79086 5.79086 6 8 6H9C9.55228 6 10 6.44772 10 7V13C10 15.2091 8.20914 17 6 17H5C4.44772 17 4 16.5523 4 16V10Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M14 10C14 7.79086 15.7909 6 18 6H19C19.5523 6 20 6.44772 20 7V13C20 15.2091 18.2091 17 16 17H15C14.4477 17 14 16.5523 14 16V10Z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <p class="recent-feedback-comment-text">{{ feedback.comment }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Collection Stats -->
+    <div class="profile-card">
+      <h2 class="card-title">📓 Collection Stats</h2>
+      <div class="stats-grid profile-stats-grid">
+        <div class="stat-item">
+          <span class="stat-number">{{ stats.owned }}</span>
+          <span class="stat-name">Stickers Owned</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">{{ stats.duplicates }}</span>
+          <span class="stat-name">For Trade</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">{{ stats.completion }}%</span>
+          <span class="stat-name">Complete</span>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="collection-progress">
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: {{ stats.completion }}%"></div>
+        </div>
+        <span class="progress-text">{{ stats.owned }} / {{ stats.total }} stickers</span>
+      </div>
+    </div>
+
+    <!-- Contact Button -->
+    <div class="profile-card action-card">
+      <a href="{{ url_for('auth.users') }}#user-{{ user.id }}" class="btn btn-primary btn-block">
+        💬 Send Trade Message
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+// Track selected feedback type
+let selectedFeedbackType = null;
+
+// Select feedback type
+function selectFeedbackType(type) {
+  selectedFeedbackType = type;
+
+  // Update button styles
+  document.getElementById('btnGood').classList.remove('active');
+  document.getElementById('btnBad').classList.remove('active');
+
+  if (type === 'good') {
+    document.getElementById('btnGood').classList.add('active');
+  } else {
+    document.getElementById('btnBad').classList.add('active');
+  }
+
+  // Show comment section
+  const commentSection = document.getElementById('commentSection');
+  const submitSection = document.getElementById('submitSection');
+  commentSection.style.display = 'block';
+  submitSection.style.display = 'block';
+
+  // Focus on textarea
+  setTimeout(() => document.getElementById('feedbackComment').focus(), 100);
+}
+
+// Character counter
+function updateCharCount() {
+  const textarea = document.getElementById('feedbackComment');
+  const count = textarea.value.length;
+  document.getElementById('charCount').textContent = count;
+
+  // Validate
+  const submitBtn = document.getElementById('submitFeedbackBtn');
+  const errorMsg = document.getElementById('commentError');
+
+  if (count >= 5) {
+    submitBtn.disabled = false;
+    errorMsg.style.display = 'none';
+    textarea.classList.remove('invalid');
+  } else {
+    submitBtn.disabled = true;
+    if (count > 0) {
+      errorMsg.style.display = 'block';
+      textarea.classList.add('invalid');
+    }
+  }
+}
+
+// Add event listener for textarea
+document.getElementById('feedbackComment').addEventListener('input', updateCharCount);
+
+// Submit feedback with comment
+async function submitFeedbackWithComment() {
+  if (!selectedFeedbackType) {
+    showNotification('Please select a feedback type first', 'error');
+    return;
+  }
+
+  const comment = document.getElementById('feedbackComment').value.trim();
+  if (!comment || comment.length < 5) {
+    showNotification('Please provide a comment (at least 5 characters)', 'error');
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitFeedbackBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="submit-icon">⏳</span><span class="submit-text">Submitting...</span>';
+
+  try {
+    const response = await fetch('/auth/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        to_user_id: {{ user.id }},
+        feedback_type: selectedFeedbackType,
+        comment: comment
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      showNotification(data.message, 'success');
+      setTimeout(() => window.location.reload(), 800);
+    } else {
+      showNotification(data.message || 'Error submitting feedback', 'error');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span class="submit-icon">📝</span><span class="submit-text">Submit Feedback</span>';
+    }
+  } catch (error) {
+    console.error('Feedback error:', error);
+    showNotification('An error occurred. Please try again.', 'error');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<span class="submit-icon">📝</span><span class="submit-text">Submit Feedback</span>';
+  }
+}
+
+// Remove feedback
+async function removeFeedback() {
+  {% if existing_feedback %}
+  try {
+    const response = await fetch('/auth/api/feedback/{{ existing_feedback.id }}', {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token() }}'
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Update counts
+      document.getElementById('goodCount').textContent = data.good_count;
+      document.getElementById('badCount').textContent = data.bad_count;
+
+      // Remove active states
+      document.getElementById('btnGood').classList.remove('active');
+      document.getElementById('btnBad').classList.remove('active');
+
+      // Hide existing feedback notice
+      const notice = document.getElementById('existingFeedbackNotice');
+      if (notice) notice.style.display = 'none';
+
+      showNotification(data.message, 'success');
+
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      showNotification(data.message || 'Error removing feedback', 'error');
+    }
+  } catch (error) {
+    console.error('Remove feedback error:', error);
+    showNotification('An error occurred. Please try again.', 'error');
+  }
+  {% endif %}
+}
+
+// Show notification
+function showNotification(message, type) {
+  const notification = document.createElement('div');
+  notification.className = `flash flash-${type}`;
+  notification.textContent = message;
+  notification.style.position = 'fixed';
+  notification.style.top = '20px';
+  notification.style.right = '20px';
+  notification.style.zIndex = '9999';
+  notification.style.padding = '1rem 1.5rem';
+  notification.style.borderRadius = '8px';
+  notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+
+  if (type === 'success') {
+    notification.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+  } else {
+    notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+  }
+  notification.style.color = 'white';
+
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
+}
+</script>
+
+<style>
+/* User Detail Page Styles - Redesigned */
+.back-link {
+  margin-bottom: 1rem;
+}
+
+.back-link .btn {
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+}
+
+.user-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(14, 165, 233, 0.03));
+  border-radius: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  margin-bottom: 1rem;
+}
+
+.user-detail-avatar {
+  flex-shrink: 0;
+}
+
+.user-detail-photo {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(56, 189, 248, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-detail-photo:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.user-detail-photo-placeholder {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(56, 189, 248, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.user-detail-photo-placeholder:hover {
+  transform: scale(1.05);
+}
+
+.user-detail-initials {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+}
+
+.user-detail-info {
+  flex: 1;
+}
+
+.user-detail-name {
+  font-size: 1.5rem;
+  margin-bottom: 0.35rem;
+  background: linear-gradient(135deg, #38bdf8, #7dd3fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+.user-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  align-items: center;
+}
+
+.user-detail-location {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.detail-flag {
+  width: 16px;
+  height: auto;
+  border-radius: 2px;
+}
+
+.user-detail-member {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* Feedback Section */
+.feedback-section {
+  margin-top: 0;
+}
+
+.feedback-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.feedback-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex: 1;
+  min-width: 80px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.feedback-stat:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.2);
+}
+
+.feedback-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.feedback-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.feedback-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.2rem;
+  text-align: center;
+}
+
+/* Container - Clean and Modern */
+.auth-container.profile-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Profile Card - Clean Design */
+.profile-container .profile-card {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.profile-container .profile-card:hover {
+  border-color: rgba(56, 189, 248, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.profile-container .profile-card .card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+}
+
+/* Feedback Section - Compact Design */
+.your-feedback-section {
+  padding: 0;
+}
+
+.feedback-form-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.feedback-form-icon {
+  font-size: 1.75rem;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(14, 165, 233, 0.08));
+  padding: 0.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.feedback-form-title {
+  flex: 1;
+}
+
+.feedback-form-title .feedback-subtitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.2rem 0;
+  border: none;
+  padding: 0;
+}
+
+.feedback-form-title .feedback-description {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  opacity: 0.8;
+}
+
+/* Feedback Type Selection - Compact */
+.feedback-type-selection {
+  margin-bottom: 1rem;
+}
+
+.feedback-type-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: 0.6rem;
+}
+
+.feedback-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.feedback-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.feedback-btn-good {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.06), rgba(34, 197, 94, 0.02));
+}
+
+.feedback-btn-good:hover,
+.feedback-btn-good.active {
+  border-color: rgba(34, 197, 94, 0.6);
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.06));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.15);
+}
+
+.feedback-btn-bad {
+  border-color: rgba(239, 68, 68, 0.25);
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.06), rgba(239, 68, 68, 0.02));
+}
+
+.feedback-btn-bad:hover,
+.feedback-btn-bad.active {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.06));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.15);
+}
+
+.feedback-btn-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.feedback-btn-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.15rem;
+}
+
+.feedback-btn-desc {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  opacity: 0.75;
+}
+
+/* Comment Section - Compact */
+.feedback-comment-section {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.feedback-comment-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+.required-badge {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.feedback-comment-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 10px;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: all 0.2s ease;
+}
+
+.feedback-comment-input:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(15, 23, 42, 0.7);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.08);
+}
+
+.feedback-comment-input.invalid {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.feedback-comment-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  font-size: 0.85rem;
+}
+
+.feedback-comment-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.feedback-comment-error {
+  font-size: 0.75rem;
+  color: #ef4444;
+  display: none;
+}
+
+.feedback-comment-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* Submit Section */
+.feedback-submit-section {
+  margin-top: 0.75rem;
+}
+
+.feedback-submit-btn {
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  box-shadow: 0 3px 12px rgba(59, 130, 246, 0.25);
+}
+
+.feedback-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35);
+}
+
+.feedback-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.feedback-comment-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.3rem;
+  text-align: right;
+}
+
+/* Existing Feedback Notice - Compact */
+.existing-feedback-notice {
+  padding: 1rem;
+  background: linear-gradient(145deg, rgba(56, 189, 248, 0.08), rgba(56, 189, 248, 0.03));
+  border-radius: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.existing-feedback-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.existing-feedback-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.existing-feedback-badge.badge-good {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.existing-feedback-badge.badge-bad {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.existing-feedback-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.existing-feedback-date {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.btn-remove-feedback {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  padding: 0.3rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-remove-feedback:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.btn-remove-feedback svg {
+  width: 14px;
+  height: 14px;
+}
+
+.existing-feedback-comment-box {
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 10px;
+  border-left: 2px solid rgba(56, 189, 248, 0.4);
+}
+
+.comment-box-label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
+  display: block;
+}
+
+.comment-box-text {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0;
+  font-style: italic;
+}
+
+.feedback-highlight-good {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.feedback-highlight-bad {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Recent Feedback Section - Compact */
+.recent-feedback-section {
+  margin-top: 0.75rem;
+}
+
+.recent-feedback-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.recent-feedback-header .feedback-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.recent-feedback-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.25rem 0.6rem;
+  border-radius: 16px;
+  font-weight: 500;
+}
+
+.recent-feedback-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recent-feedback-card {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.2s ease;
+}
+
+.recent-feedback-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.recent-feedback-card.feedback-card-good {
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.01));
+  border-color: rgba(34, 197, 94, 0.15);
+}
+
+.recent-feedback-card.feedback-card-bad {
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.01));
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.recent-feedback-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.recent-feedback-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.recent-feedback-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recent-feedback-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.feedback-avatar-initial {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+}
+
+.recent-feedback-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.recent-feedback-from {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.recent-feedback-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.recent-feedback-badge.good {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.recent-feedback-badge.bad {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.recent-feedback-date {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.recent-feedback-comment {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 10px;
+  margin-top: 0.4rem;
+}
+
+.comment-quote-icon {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  width: 16px;
+  height: 16px;
+}
+
+.recent-feedback-comment-text {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.icon-good {
+  color: #22c55e;
+}
+
+.icon-bad {
+  color: #ef4444;
+}
+
+/* Stats Grid for Collection */
+.stats-grid.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.stats-grid.profile-stats-grid .stat-item {
+  text-align: center;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stats-grid.profile-stats-grid .stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.stats-grid.profile-stats-grid .stat-name {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* Collection Progress - Refined */
+.collection-progress {
+  margin-top: 0.75rem;
+}
+
+.progress-bar-container {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.action-card {
+  text-align: center;
+}
+
+.action-card .btn {
+  font-size: 0.95rem;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Responsive - Mobile Optimized */
+@media (max-width: 768px) {
+  .auth-container.profile-container {
+    padding: 0.75rem;
+  }
+
+  .profile-container .profile-card {
+    padding: 1rem;
+    border-radius: 14px;
+  }
+
+  .user-detail-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .user-detail-photo,
+  .user-detail-photo-placeholder {
+    width: 80px;
+    height: 80px;
+  }
+
+  .user-detail-initials {
+    font-size: 1.75rem;
+  }
+
+  .user-detail-name {
+    font-size: 1.25rem;
+  }
+
+  .user-detail-meta {
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  .feedback-stats {
+    gap: 0.5rem;
+  }
+
+  .feedback-stat {
+    padding: 0.75rem;
+  }
+
+  .feedback-icon {
+    font-size: 1.25rem;
+  }
+
+  .feedback-count {
+    font-size: 1.25rem;
+  }
+
+  .feedback-buttons {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .feedback-btn {
+    padding: 0.75rem;
+  }
+
+  .feedback-btn-icon {
+    font-size: 1.25rem;
+  }
+
+  .stats-grid.profile-stats-grid {
+    gap: 0.5rem;
+  }
+
+  .stats-grid.profile-stats-grid .stat-number {
+    font-size: 1.25rem;
+  }
+
+  .existing-feedback-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .recent-feedback-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .recent-feedback-avatar {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .feedback-form-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+  }
+
+  .feedback-form-icon {
+    font-size: 1.5rem;
+    padding: 0.4rem;
+  }
+
+  .user-detail-photo,
+  .user-detail-photo-placeholder {
+    width: 70px;
+    height: 70px;
+  }
+
+  .user-detail-initials {
+    font-size: 1.5rem;
+  }
+
+  .feedback-stats {
+    flex-direction: column;
+  }
+
+  .feedback-stat {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .feedback-stat > * {
+    margin: 0;
+  }
+}
+</style>
+{% endblock %}

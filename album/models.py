@@ -233,6 +233,70 @@ class UserSticker(db.Model):
         return f"<UserSticker user={self.user_id} sticker={self.sticker_id}>"
 
 
+class UserFeedback(db.Model):
+    """
+    User feedback/ratings system for peer-to-peer recognition.
+
+    Users can give positive (👍) or negative (👎) feedback to other users
+    for trading experiences. Each user can only give one feedback per
+    target user, but can change their feedback from positive to negative
+    or vice versa.
+
+    Attributes:
+        id: Primary key
+        from_user_id: User giving the feedback
+        to_user_id: User receiving the feedback
+        feedback_type: 'good' (👍) or 'bad' (👎)
+        created_at: When feedback was given
+    """
+
+    __tablename__ = "user_feedback"
+
+    id = db.Column(db.Integer, primary_key=True)
+    from_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    to_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    feedback_type = db.Column(db.String(10), nullable=False)  # 'good' or 'bad'
+    comment = db.Column(db.Text, nullable=False)  # Required comment for feedback reason
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    from_user = db.relationship("User", foreign_keys=[from_user_id], backref="given_feedback")
+    to_user = db.relationship("User", foreign_keys=[to_user_id], backref="received_feedback")
+
+    # Unique constraint: one feedback per user pair
+    __table_args__ = (db.UniqueConstraint("from_user_id", "to_user_id", name="unique_user_feedback_pair"),)
+
+    def __init__(self, from_user_id: int, to_user_id: int, feedback_type: str, comment: str = ""):
+        """
+        Create a new feedback record.
+
+        Args:
+            from_user_id: ID of user giving feedback
+            to_user_id: ID of user receiving feedback
+            feedback_type: 'good' or 'bad'
+            comment: Required comment explaining the feedback reason
+        """
+        self.from_user_id = from_user_id
+        self.to_user_id = to_user_id
+        self.feedback_type = feedback_type
+        self.comment = comment
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "from_user_id": self.from_user_id,
+            "to_user_id": self.to_user_id,
+            "feedback_type": self.feedback_type,
+            "comment": self.comment,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "from_username": self.from_user.username if self.from_user else None,
+        }
+
+    def __repr__(self) -> str:
+        return f"<UserFeedback {self.from_user_id} -> {self.to_user_id}: {self.feedback_type}>"
+
+
 class PasswordResetToken(db.Model):
     """
     Password reset token for "Forgot Password" functionality.

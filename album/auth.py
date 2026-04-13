@@ -445,6 +445,7 @@ def profile():
     Allows updating profile details including country.
     """
     from .config import ALBUM_PAGES
+    from .models import UserFeedback
 
     # Handle profile update
     if request.method == "POST":
@@ -527,6 +528,14 @@ def profile():
         "total": total_stickers,
     }
 
+    # Get user's feedback counts
+    good_count = db.session.query(db.func.count(UserFeedback.id)).filter_by(
+        to_user_id=current_user.id, feedback_type='good'
+    ).scalar() or 0
+    bad_count = db.session.query(db.func.count(UserFeedback.id)).filter_by(
+        to_user_id=current_user.id, feedback_type='bad'
+    ).scalar() or 0
+
     # Get user's album versions
     user_albums = UserAlbum.query.filter_by(user_id=current_user.id).all()
     user_version_ids = {ua.album_version_id for ua in user_albums}
@@ -544,7 +553,9 @@ def profile():
                           user_albums=user_albums,
                           user_version_ids=user_version_ids,
                           active_album=active_album,
-                          all_versions=all_versions)
+                          all_versions=all_versions,
+                          good_count=good_count,
+                          bad_count=bad_count)
 
 
 @auth_bp.route("/manage-versions", methods=["POST"])
@@ -904,6 +915,218 @@ def delete_account():
 
 
 # =============================================================================
+# USER FEEDBACK SYSTEM
+# =============================================================================
+
+@auth_bp.route("/user/<int:user_id>")
+@login_required
+def user_detail(user_id):
+    """
+    Display detailed profile page for a specific user.
+
+    Shows user information, collection stats, and feedback.
+    Allows current user to give feedback (👍/👎) to this user.
+    """
+    from .config import ALBUM_PAGES
+    from .models import UserFeedback
+
+    # Get the target user
+    user = User.query.get_or_404(user_id)
+
+    # Don't allow viewing own detail page (redirect to profile)
+    if user.id == current_user.id:
+        return redirect(url_for("auth.profile"))
+
+    # Get feedback counts
+    good_count = UserFeedback.query.filter_by(to_user_id=user.id, feedback_type='good').count()
+    bad_count = UserFeedback.query.filter_by(to_user_id=user.id, feedback_type='bad').count()
+
+    # Check if current user has already given feedback
+    existing_feedback = UserFeedback.query.filter_by(
+        from_user_id=current_user.id,
+        to_user_id=user.id
+    ).first()
+
+    # Get recent feedback (last 10)
+    recent_feedback = UserFeedback.query.filter_by(to_user_id=user.id).order_by(
+        UserFeedback.created_at.desc()
+    ).limit(10).all()
+
+    # Get user's collection stats
+    owned_count = UserSticker.query.filter_by(user_id=user.id, is_owned=True).count()
+    duplicates_count = db.session.query(db.func.sum(UserSticker.duplicate_count)).filter_by(
+        user_id=user.id
+    ).scalar() or 0
+
+    total_stickers = sum(len(page.get("stickers", [])) for page in ALBUM_PAGES)
+    completion = round((owned_count / total_stickers) * 100) if total_stickers > 0 else 0
+
+    stats = {
+        "owned": owned_count,
+        "duplicates": duplicates_count,
+        "completion": completion,
+        "total": total_stickers,
+    }
+
+    return render_template(
+        "auth/user_detail.html",
+        user=user,
+        stats=stats,
+        good_count=good_count,
+        bad_count=bad_count,
+        existing_feedback=existing_feedback,
+        recent_feedback=recent_feedback,
+        country_codes=COUNTRY_CODES,
+    )
+
+
+@auth_bp.route("/api/feedback", methods=["POST"])
+@login_required
+def add_feedback():
+    """
+    Add or update feedback for a user.
+
+    Request body (JSON):
+        - to_user_id: User receiving feedback
+        - feedback_type: 'good' (👍) or 'bad' (👎)
+
+    Returns:
+        - success: True/False
+        - message: Status message
+        - good_count: Updated good feedback count
+        - bad_count: Updated bad feedback count
+    """
+    from .models import UserFeedback
+
+    data = request.get_json(silent=True) or {}
+    to_user_id = data.get("to_user_id")
+    feedback_type = data.get("feedback_type")
+    comment = data.get("comment", "").strip()
+
+    # Validation
+    if not to_user_id or not feedback_type:
+        return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+    if feedback_type not in ['good', 'bad']:
+        return jsonify({"success": False, "message": "Invalid feedback type"}), 400
+
+    # Comment is required
+    if not comment or len(comment) < 5:
+        return jsonify({"success": False, "message": "Please provide a comment (at least 5 characters) explaining your feedback"}), 400
+
+    # Prevent self-feedback
+    if int(to_user_id) == current_user.id:
+        return jsonify({"success": False, "message": "Cannot give feedback to yourself"}), 400
+
+    # Check if target user exists
+    to_user = User.query.get(to_user_id)
+    if not to_user:
+        return jsonify({"success": False, "message": "User not found"}), 404
+
+    try:
+        # Check for existing feedback
+        existing = UserFeedback.query.filter_by(
+            from_user_id=current_user.id,
+            to_user_id=to_user_id
+        ).first()
+
+        if existing:
+            # Update existing feedback
+            existing.feedback_type = feedback_type
+            existing.comment = comment
+            existing.created_at = datetime.now(timezone.utc)
+            message = "Feedback updated"
+        else:
+            # Create new feedback
+            feedback = UserFeedback(
+                from_user_id=current_user.id,
+                to_user_id=to_user_id,
+                feedback_type=feedback_type,
+                comment=comment
+            )
+            db.session.add(feedback)
+            message = "Feedback added"
+
+        db.session.commit()
+
+        # Get updated counts
+        good_count = UserFeedback.query.filter_by(to_user_id=to_user_id, feedback_type='good').count()
+        bad_count = UserFeedback.query.filter_by(to_user_id=to_user_id, feedback_type='bad').count()
+
+        return jsonify({
+            "success": True,
+            "message": message,
+            "good_count": good_count,
+            "bad_count": bad_count,
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Feedback error: {e}")
+        return jsonify({"success": False, "message": "An error occurred"}), 500
+
+
+@auth_bp.route("/api/feedback/<int:feedback_id>", methods=["DELETE"])
+@login_required
+def delete_feedback(feedback_id):
+    """
+    Delete feedback given by current user.
+
+    Users can only delete their own feedback.
+    """
+    from .models import UserFeedback
+
+    feedback = UserFeedback.query.get_or_404(feedback_id)
+
+    # Can only delete own feedback
+    if feedback.from_user_id != current_user.id:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+    try:
+        to_user_id = feedback.to_user_id
+        db.session.delete(feedback)
+        db.session.commit()
+
+        # Get updated counts
+        good_count = UserFeedback.query.filter_by(to_user_id=to_user_id, feedback_type='good').count()
+        bad_count = UserFeedback.query.filter_by(to_user_id=to_user_id, feedback_type='bad').count()
+
+        return jsonify({
+            "success": True,
+            "message": "Feedback removed",
+            "good_count": good_count,
+            "bad_count": bad_count,
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Delete feedback error: {e}")
+        return jsonify({"success": False, "message": "An error occurred"}), 500
+
+
+@auth_bp.route("/api/feedback/counts/<int:user_id>")
+@login_required
+def get_feedback_counts(user_id):
+    """
+    Get feedback counts for a user.
+
+    Returns:
+        - good_count: Number of 👍 feedback
+        - bad_count: Number of 👎 feedback
+    """
+    from .models import UserFeedback
+
+    good_count = UserFeedback.query.filter_by(to_user_id=user_id, feedback_type='good').count()
+    bad_count = UserFeedback.query.filter_by(to_user_id=user_id, feedback_type='bad').count()
+
+    return jsonify({
+        "success": True,
+        "good_count": good_count,
+        "bad_count": bad_count,
+    })
+
+
+# =============================================================================
 # OTHER USERS (Trading Partners)
 # =============================================================================
 
@@ -965,6 +1188,30 @@ def users():
         User.username != PUBLIC_CONTACT_USERNAME
     ).all()
 
+    # Get feedback counts for all users in one query
+    from .models import UserFeedback
+    user_ids = [u.id for u in other_users]
+
+    # Get good feedback counts
+    good_feedback_counts = db.session.query(
+        UserFeedback.to_user_id,
+        db.func.count(UserFeedback.id).label('count')
+    ).filter(
+        UserFeedback.to_user_id.in_(user_ids),
+        UserFeedback.feedback_type == 'good'
+    ).group_by(UserFeedback.to_user_id).all()
+    good_counts = {uid: count for uid, count in good_feedback_counts}
+
+    # Get bad feedback counts
+    bad_feedback_counts = db.session.query(
+        UserFeedback.to_user_id,
+        db.func.count(UserFeedback.id).label('count')
+    ).filter(
+        UserFeedback.to_user_id.in_(user_ids),
+        UserFeedback.feedback_type == 'bad'
+    ).group_by(UserFeedback.to_user_id).all()
+    bad_counts = {uid: count for uid, count in bad_feedback_counts}
+
     user_data = []
 
     for user in other_users:
@@ -1006,6 +1253,8 @@ def users():
             "can_give_count": len(can_give),
             "match_score": match_score,
             "completion": round((len(user_owned) / len(all_sticker_ids)) * 100) if all_sticker_ids else 0,
+            "good_feedback_count": good_counts.get(user.id, 0),
+            "bad_feedback_count": bad_counts.get(user.id, 0),
         })
 
     # Sort by "you can get" count first (descending) - users with most stickers current user needs first
